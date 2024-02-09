@@ -38,11 +38,25 @@ _Write a summary of your project._
 ## General Background Information
 _Provide enough background on your topic that others can understand the why and how of your analysis_ 
 
+Finite mixture models are used to analyze data presumably arising from several separate, yet unobserved, groups. Among these models, Gaussian mixture models and mixture of t-distributions are particularly prevalent. However, such models which are based on symmetric distribution often do not accurately represent data with asymmetric distribution. Skewed data can be more effectively managed using asymmetric distributions, thereby extending their applicability across a broader spectrum of model-based clustering scenarios [1]. If the observed data is positive, distribution is right-skewed and assumed to come from a mixture distribution, employing mixture of gamma density is a rational choice [2]. 
+
+This study intends to identify distinct customer groups within sales data of luxury goods, with each group comprising customers who exhibit similar characteristics in terms of purchase frequency and amounts. Modeling customer spending as a mixture of gamma distributions helps to identify different spending behaviors. The objective is to develop an Expectation Maximization (EM) algorithm which segregates groups based on their spending patterns, considering the individual purchases transactions made by each customer. 
+
+
 ## Description of data and data source
 _Describe what the data is, what it contains, where it is from, etc. Eventually this might be part of a methods section._
 
+This study employs simulated data to assess the effectiveness of the EM algorithm. Following successful testing, the refined algorithm will be applied to actual sales data pertaining to luxury goods. 
+
 ## Questions/Hypotheses to be addressed
 _State the research questions you plan to answer with this analysis._
+
+This study aims to answer the question, "How effective is the Expectation Maximization (EM) algorithm in identifying distinct customer groups within luxury goods sales data when accounting for individual spending by each customer, as demonstrated by initial validation using simulated data?"
+
+
+[1] Lee, S. X., & McLachlan, G. J. (2013). Model-based clustering and classification with non-normal mixture distributions. Statistical Methods & Applications, 22(4), 427-454.
+
+[2] Young, D. S., Chen, X., Hewage, D. C., & Nilo-Poyanco, R. (2019). Finite mixture-of-gamma distributions: estimation, inference, and model-based clustering. Advances in Data Analysis and Classification, 13, 1053-1082.
 
 To cite other work (important everywhere, but likely happens first in introduction), make sure your references are in the bibtex file specified in the YAML header above (here `dataanalysis_template_references.bib`) and have the right bibtex key. Then you can include like this:
 
@@ -67,7 +81,7 @@ We store those figures in the `assets` folder.
 #| label: fig-schematic
 #| fig-cap: "A figure that is manually generated and shows some overview/schematic. This has nothing to do with the data, it's just a random one from one of our projects I found and placed here."
 #| echo: FALSE
-knitr::include_graphics(here("products","assets","antigen-recognition.png"))
+#knitr::include_graphics(here("products","assets","antigen-recognition.png"))
 ```
 
 
