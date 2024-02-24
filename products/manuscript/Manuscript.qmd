@@ -40,18 +40,36 @@ _Provide enough background on your topic that others can understand the why and 
 
 Finite mixture models are used to analyze data presumably arising from several separate, yet unobserved, groups. Among these models, Gaussian mixture models and mixture of t-distributions are particularly prevalent. However, such models which are based on symmetric distribution often do not accurately represent data with asymmetric distribution. Skewed data can be more effectively managed using asymmetric distributions, thereby extending their applicability across a broader spectrum of model-based clustering scenarios [1]. If the observed data is positive, distribution is right-skewed and assumed to come from a mixture distribution, employing mixture of gamma density is a rational choice [2]. 
 
-This study intends to identify distinct customer groups within sales data of luxury goods, with each group comprising customers who exhibit similar characteristics in terms of purchase frequency and amounts. Modeling customer spending as a mixture of gamma distributions helps to identify different spending behaviors. The objective is to develop an Expectation Maximization (EM) algorithm which segregates groups based on their spending patterns, considering the individual purchases transactions made by each customer. 
+This study intends to identify distinct customer groups within sales data, with each group comprising customers who exhibit similar characteristics in terms of purchase frequency and amounts. Modeling customer spending as a mixture of gamma distributions helps to identify different spending behaviors. The objective is to develop an Expectation Maximization (EM) algorithm which segregates groups based on their spending patterns, considering the individual purchases transactions made by each customer. 
+
+The exploration begins with applying commonly used alternative models to a publicly available data and ultimately applying the gamma mixture model to this data.  
 
 
 ## Description of data and data source
 _Describe what the data is, what it contains, where it is from, etc. Eventually this might be part of a methods section._
 
-This study employs simulated data to assess the effectiveness of the EM algorithm. Following successful testing, the refined algorithm will be applied to actual sales data pertaining to luxury goods. 
+This study employs sales data, 'superstoredata' and focuses on international sales of the online retail store. 
+
+Initially this data was downloaded from Kaggle.com to it's usability for the project. Upon confirming the usability and revisiting the website seeking for further details, it could not be found in Kaggle.com. After few Google searches, the data and details were found on UC Irvine Machine Learning Repository [https://archive.ics.uci.edu/dataset/352/online+retail]. As per the website, this is a transnational data set containing all the transactions occurring between 12/1/2010 and 12/09/2011 for a UK-based and registered non-store online retail. The company primarily sells unique all-occasion gifts and many customers of the company are wholesalers.
+
+This data has nine variables. The details are explained below:
+
+(1)	InvoiceNo: It is a categorical variable with a 6-digit integral number uniquely assigned to each transaction. If this code starts with the letter ‘c’, it indicates a cancellation. 
+(2)	StockCode: It is a categorical variable with a 5-digit integral number uniquely assigned to each distinct product.
+(3)	Description: This represents Product name and is a categorical variable.
+(4)	Quantity: It represents quantities of each product (item) per transaction and is an integer.
+(5)	InvoiceDate: It represents the day and time each transaction was generated.
+(6)	UnitPrice: It represents product price per unit in sterling.
+(7)	CustomerID: It is a categorical variable with a 5-digit integral number uniquely assigned to each customer.
+(8)	Country: It represents the name of the country where each customer resides.
+
+
+The study will also use simulated data to formulate the EM algorithm. Following successful testing, the refined algorithm will be applied to the sales data. 
 
 ## Questions/Hypotheses to be addressed
 _State the research questions you plan to answer with this analysis._
 
-This study aims to answer the question, "How effective is the Expectation Maximization (EM) algorithm in identifying distinct customer groups within luxury goods sales data when accounting for individual spending by each customer, as demonstrated by initial validation using simulated data?"
+This study aims to answer the question, "How effective is the Expectation Maximization (EM) algorithm in identifying distinct customer groups when accounting for individual spending by each customer, as demonstrated by initial validation using simulated data?"
 
 
 [1] Lee, S. X., & McLachlan, G. J. (2013). Model-based clustering and classification with non-normal mixture distributions. Statistical Methods & Applications, 22(4), 427-454.
@@ -94,6 +112,27 @@ _As applicable, explain where and how you got the data. If you directly import t
 ## Data import and cleaning
 _Write code that reads in the file and cleans it so it's ready for analysis. Since this will be fairly long code for most datasets, it might be a good idea to have it in one or several R scripts. If that is the case, explain here briefly what kind of cleaning/processing you do, and provide more details and well documented code somewhere (e.g. as supplement in a paper). All materials, including files that contain code, should be commented well so everyone can follow along._
 
+This study employs sales data, 'superstoredata' and focuses on international sales of the online retail store. 
+
+Initially this data was downloaded from Kaggle.com to it's usability for the project. Upon confirming the usability and revisiting the website seeking for further details, it could not be found in Kaggle.com. After few Google searches, the data and details were found on UC Irvine Machine Learning Repository [https://archive.ics.uci.edu/dataset/352/online+retail]. As per the website, this is a transnational data set containing all the transactions occurring between 12/1/2010 and 12/09/2011 for a UK-based and registered non-store online retail. The company primarily sells unique all-occasion gifts and many customers of the company are wholesalers.
+
+This data has nine variables. The details are explained below:
+
+(1)	InvoiceNo: It is a categorical variable with a 6-digit integral number uniquely assigned to each transaction. If this code starts with the letter ‘c’, it indicates a cancellation. 
+(2)	StockCode: It is a categorical variable with a 5-digit integral number uniquely assigned to each distinct product.
+(3)	Description: This represents Product name and is a categorical variable.
+(4)	Quantity: It represents quantities of each product (item) per transaction and is an integer.
+(5)	InvoiceDate: It represents the day and time each transaction was generated.
+(6)	UnitPrice: It represents product price per unit in sterling.
+(7)	CustomerID: It is a categorical variable with a 5-digit integral number uniquely assigned to each customer.
+(8)	Country: It represents the name of the country where each customer resides.
+
+
+The study will also use simulated data to formulate the EM algorithm. Following successful testing, the refined algorithm will be applied to the sales data. 
+
+
+
+
 
 ## Statistical analysis
 _Explain anything related to your statistical analyses._
@@ -134,7 +173,7 @@ _To get some further insight into your data, if reasonable you could compute sim
 #| label: fig-result
 #| fig-cap: "Height and weight stratified by gender."
 #| echo: FALSE
-knitr::include_graphics(here("results","height-weight-stratified.png"))
+knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
 ```
 
 
@@ -148,7 +187,7 @@ Example @tbl-resulttable2 shows a summary of a linear model fit.
 #| label: tbl-resulttable2
 #| tbl-cap: "Linear model fit table."
 #| echo: FALSE
-resulttable2 = readRDS(here("results","tables-files","resulttable2.rds"))
+resulttable2 = readRDS(here("results","tables","summarytable.rds"))
 knitr::kable(resulttable2)
 ```
 
