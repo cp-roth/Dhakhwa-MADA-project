@@ -8,14 +8,9 @@ format:
     toc: false
     number-sections: true
     highlight-style: github
-bibliography: ../assets/dataanalysis-references.bib
-csl: ../assets/apa.csl
+bibliography: ../../assets/dataanalysis-references.bib
+csl: ../../assets/apa.csl
 ---
-
-The structure below is one possible setup for a data analysis project (including the course project). For a manuscript, adjust as needed. 
-You don't need to have exactly these sections, but the content covering those sections should be addressed.
-
-This uses MS Word as output format. [See here](https://quarto.org/docs/output-formats/ms-word.html) for more information. You can switch to other formats, like html or pdf. See [the Quarto documentation](https://quarto.org/) for other formats.
 
 
 ```{r, echo=FALSE, message=FALSE}
@@ -23,7 +18,6 @@ This uses MS Word as output format. [See here](https://quarto.org/docs/output-fo
 library(here)
 library(knitr)
 ```
-
 
 
 # Summary/Abstract
@@ -36,13 +30,14 @@ _Write a summary of your project._
 # Introduction 
 
 ## General Background Information
-_Provide enough background on your topic that others can understand the why and how of your analysis_ 
 
-Finite mixture models are used to analyze data presumably arising from several separate, yet unobserved, groups. Among these models, Gaussian mixture models and mixture of t-distributions are particularly prevalent. However, such models which are based on symmetric distribution often do not accurately represent data with asymmetric distribution. Skewed data can be more effectively managed using asymmetric distributions, thereby extending their applicability across a broader spectrum of model-based clustering scenarios [1]. If the observed data is positive, distribution is right-skewed and assumed to come from a mixture distribution, employing mixture of gamma density is a rational choice [2]. 
+This project aims to gain knowledge of customer segmentation from the supervised and un-supervised learning perspectives. In the initial analysis phase, the study applies basic statistical techniques such as logistic regression to analyze a retail store’s data, to grasp general patterns of customer behavior. As the project progresses, it integrates more advanced tool, Expectation Maximization algorithms. 
 
-This study intends to identify distinct customer groups within sales data, with each group comprising customers who exhibit similar characteristics in terms of purchase frequency and amounts. Modeling customer spending as a mixture of gamma distributions helps to identify different spending behaviors. The objective is to develop an Expectation Maximization (EM) algorithm which segregates groups based on their spending patterns, considering the individual purchases transactions made by each customer. 
+It is crucial that organizations understand their customer’s behaviors and their purchasing patterns. By studying the purchasing patterns of its customers, an organization can design and execute effective customized customer engagement strategies, which can enhance customer service, and consequently increase sales. Thus, in order to understand their customer’s purchasing behavior, organizations can engage in customer segmentation. This analytical approach involves classifying customers into groups exhibiting similar characteristics or purchasing behaviors. When organizations analyze factors, such as purchase frequency and spending habits, they can identify distinct segments within their customer base and subsequently tailor their marketing and sales efforts to meet the unique needs of each group. This tailored personalized approach can enhance customer satisfaction and also improve multiple end results like customer loyalty, operational efficiency, and profitability.
 
-The exploration begins with applying commonly used alternative models to a publicly available data and ultimately applying the gamma mixture model to this data.  
+The project will employ a simple model for classification, logistic regression. Since the data doesn't have a labeled categorical variable for classification, a target variable will be created based on the purchase amount and frequency during a fixed period. 
+
+The project will also explore the use of mixture models as a potential analytical tool based on the assumption that customer data is inherently complex which can exhibit multiple underlying patterns that are not immediately evident through conventional analysis. Thus, the use of finite mixture models is useful in this project. These models are adept at analyzing data that may contain multiple, distinct groups hidden within the data. Gaussian mixture models and mixtures of t-distributions are examples of the most commonly used finite mixture models in analyzing such data. However, models like these that are primarily grounded in symmetric distributions may not always provide an accurate representation of data characterized by asymmetric distributions. Therefore, in cases where skewed data need to be analyzed, asymmetric models become useful since they offer a broader applicability across various model-based clustering scenarios [@lee2013model]. More specifically, the application of a mixture of gamma densities is a rational choice when dealing with observed data that is positive and exhibits right-skewness, suggesting a mixture distribution origin [@young2019finite]. This project will also explore the application and compare the results of Gaussian mixture model and Gamma mixture model on the retail store’s data. 
 
 
 ## Description of data and data source
@@ -50,7 +45,7 @@ _Describe what the data is, what it contains, where it is from, etc. Eventually 
 
 This study employs sales data, 'superstoredata' and focuses on international sales of the online retail store. 
 
-Initially this data was downloaded from Kaggle.com to it's usability for the project. Upon confirming the usability and revisiting the website seeking for further details, it could not be found in Kaggle.com. After few Google searches, the data and details were found on UC Irvine Machine Learning Repository [https://archive.ics.uci.edu/dataset/352/online+retail]. As per the website, this is a transnational data set containing all the transactions occurring between 12/1/2010 and 12/09/2011 for a UK-based and registered non-store online retail. The company primarily sells unique all-occasion gifts and many customers of the company are wholesalers.
+Initially this data was downloaded from Kaggle.com to assess it's usability for the project. Upon confirming the usability and revisiting the website seeking for further details, it could not be found in Kaggle.com. After few Google searches, the data and details were found on UC Irvine Machine Learning Repository [https://archive.ics.uci.edu/dataset/352/online+retail]. As per the website, this is a transnational data set containing all the transactions occurring between 12/1/2010 and 12/09/2011 for a UK-based and registered non-store online retail. The company primarily sells unique all-occasion gifts and many customers of the company are wholesalers.
 
 This data has nine variables. The details are explained below:
 
@@ -62,24 +57,12 @@ This data has nine variables. The details are explained below:
 (6)	UnitPrice: It represents product price per unit in sterling.
 (7)	CustomerID: It is a categorical variable with a 5-digit integral number uniquely assigned to each customer.
 (8)	Country: It represents the name of the country where each customer resides.
-
-
-The study will also use simulated data to formulate the EM algorithm. Following successful testing, the refined algorithm will be applied to the sales data. 
+(9) Sales: It represents product price multiplied by UnitPrice.
 
 ## Questions/Hypotheses to be addressed
 _State the research questions you plan to answer with this analysis._
 
-This study aims to answer the question, "How effective is the Expectation Maximization (EM) algorithm in identifying distinct customer groups when accounting for individual spending by each customer, as demonstrated by initial validation using simulated data?"
-
-
-[1] Lee, S. X., & McLachlan, G. J. (2013). Model-based clustering and classification with non-normal mixture distributions. Statistical Methods & Applications, 22(4), 427-454.
-
-[2] Young, D. S., Chen, X., Hewage, D. C., & Nilo-Poyanco, R. (2019). Finite mixture-of-gamma distributions: estimation, inference, and model-based clustering. Advances in Data Analysis and Classification, 13, 1053-1082.
-
-To cite other work (important everywhere, but likely happens first in introduction), make sure your references are in the bibtex file specified in the YAML header above (here `dataanalysis_template_references.bib`) and have the right bibtex key. Then you can include like this:
-
-Examples of reproducible research projects can for instance be found in [@mckay2020; @mckay2020a].
-
+This project aims to gain a comprehensive understanding of customer segmentation from different perspectives; predictive (logistic regression), probabilistic clustering (GMM), and skewness-aware clustering (Gamma Mixture Models).
 
 
 {{< pagebreak >}}
@@ -90,33 +73,14 @@ Examples of reproducible research projects can for instance be found in [@mckay2
 _Describe your methods. That should describe the data, the cleaning processes, and the analysis approaches. You might want to provide a shorter description here and all the details in the supplement._
 
 
-## Schematic of workflow
-
-Sometimes you might want to show a schematic diagram/figure that was not created with code (if you can do it with code, do it). @fig-schematic is an example of some - completely random/unrelated - schematic that was generated with Biorender.
-We store those figures in the `assets` folder.
-
-```{r}
-#| label: fig-schematic
-#| fig-cap: "A figure that is manually generated and shows some overview/schematic. This has nothing to do with the data, it's just a random one from one of our projects I found and placed here."
-#| echo: FALSE
-#knitr::include_graphics(here("products","assets","antigen-recognition.png"))
-```
-
-
-
-
-## Data aquisition
-_As applicable, explain where and how you got the data. If you directly import the data from an online source, you can combine this section with the next._
-
-
 ## Data import and cleaning
 _Write code that reads in the file and cleans it so it's ready for analysis. Since this will be fairly long code for most datasets, it might be a good idea to have it in one or several R scripts. If that is the case, explain here briefly what kind of cleaning/processing you do, and provide more details and well documented code somewhere (e.g. as supplement in a paper). All materials, including files that contain code, should be commented well so everyone can follow along._
 
-This study employs sales data, 'superstoredata' and focuses on international sales of the online retail store. 
+This project employs sales data , 'superstoredata', of an online retail store based in United Kingdom, to explore purchase patterns of customers outside of United Kingdom. 
 
 Initially this data was downloaded from Kaggle.com to it's usability for the project. Upon confirming the usability and revisiting the website seeking for further details, it could not be found in Kaggle.com. After few Google searches, the data and details were found on UC Irvine Machine Learning Repository [https://archive.ics.uci.edu/dataset/352/online+retail]. As per the website, this is a transnational data set containing all the transactions occurring between 12/1/2010 and 12/09/2011 for a UK-based and registered non-store online retail. The company primarily sells unique all-occasion gifts and many customers of the company are wholesalers.
 
-This data has nine variables. The details are explained below:
+The data has 541909 observations and nine variables detailed as below:
 
 (1)	InvoiceNo: It is a categorical variable with a 6-digit integral number uniquely assigned to each transaction. If this code starts with the letter ‘c’, it indicates a cancellation. 
 (2)	StockCode: It is a categorical variable with a 5-digit integral number uniquely assigned to each distinct product.
@@ -126,13 +90,21 @@ This data has nine variables. The details are explained below:
 (6)	UnitPrice: It represents product price per unit in sterling.
 (7)	CustomerID: It is a categorical variable with a 5-digit integral number uniquely assigned to each customer.
 (8)	Country: It represents the name of the country where each customer resides.
+(9) Sales: It represents product price multiplied by UnitPrice.
 
+One key factor of this data is it accounts sales of a particular item from an Invoice as an observation leading different items sold in the same Invoice to appear as separate observations. As such most of the Invoice numbers appear several times in different observations of the data.
 
-The study will also use simulated data to formulate the EM algorithm. Following successful testing, the refined algorithm will be applied to the sales data. 
+As the purpose of the project is to study purchase pattern of customers residing outside of UK, first all of the UK based observations were dropped from the data which brought down the data size to 46431 observations with 9 variables.  
 
+The data inspection pointed out to several issues requiring cleaning such as missing values in CustomerID, negative signs in Quantity and Sales and incorrect format of date. It also pointed out that InvoiceNo, StockCode, Description and Country were coded as character variables in the data which needed to be changed to factors for better data manipulation.
 
+First, there were 1480 missing values in CustomerID. Customer behavior is a crucial part of this analysis which cannot be tracked without the unique customerID. The observations without CustomerID do not help in doing meaningful analysis and are dropped. Further, CustomerID was coded as a numerical variable in the original data and was converted to factor variable during the cleaning process. Country, Description and StockCode were also converted to factors from character variables. Transaction date was also converted to the date format.
 
+There were 1372 observations with negative values in quantity and sales due to order cancellation which were dropped from the data.  
 
+A detailed scrutiny of the distribution of UnitPrice revealed that all the high value goods with a Unitprice above 25 were distributed between 75 and 100 percentile. A closer look at this inter-quartile range disclosed that there were 19 categories of product description which had the Unitprice above 25. Some of those categories had descriptions such as CARRIAGE, POSTAGE, Manual, which appeared to be related to logistics. 1216 observations with such descriptions were dropped from the data since those were less likely to be directly related to customer purchase. 
+
+The store also sells merchandises in wholesale quantities. A wholesaler potentially purchased in big volumes and in higher frequencies. In absence of clear information on wholesalers, a scatter plot of Total Invoice Value by Purchase Frequency was plotted to identify potential wholesalers. The scatter plot revealed that most of the customers made purchases less than a frequency of 50 during that period and most of the cumulative purchase values were less than 50,000. Assuming that the outliers represented purchases by wholesalers, observations with purchase frequencies above 50 and cumulative Invoice value above 50,000 are dropped from the data. This step excluded 9745 observations from the data. The cleaned data has 32602 observations with 9 variables.
 
 ## Statistical analysis
 _Explain anything related to your statistical analyses._
@@ -145,21 +117,25 @@ _Explain anything related to your statistical analyses._
 
 ## Exploratory/Descriptive analysis
 
-_Use a combination of text/tables/figures to explore and describe your data. Show the most important descriptive results here. Additional ones should go in the supplement. Even more can be in the R and Quarto files that are part of your project._
+A meaningful analysis of customer spending pattern require the Invoice Sales Amount, total purchase by Customers, frequency of customer purchases during a period or a combination of those. @tbl-resulttable1 is created which provides the descriptive statistics of sales by Invoice value, Customer purchase and frequency of customer purchase. It revealed that there were 1479 transactions with 414 different customers during the period of 2010-12-01 to	2011-12-09. The store recorded a mean sales of GBP 567 per transaction, an average cumulative sales of GBP 2025 to individual customers and sales frequency of above 3 times per customer. 
 
 
-@tbl-summarytable shows a summary of the data.
-
-Note the loading of the data providing a **relative** path using the `../../` notation. (Two dots means a folder up). You never want to specify an **absolute** path like `C:\ahandel\myproject\results\` because if you share this with someone, it won't work for them since they don't have that path. You can also use the `here` R package to create paths. See examples of that below.
-
-```{r}
-#| label: tbl-summarytable
-#| tbl-cap: "Data summary table."
+```{r out.width="100%", fig.show='hold', warning=FALSE}
+#| label: tbl-resulttable1
+#| tbl-cap: "Descriptive Statistics"
 #| echo: FALSE
-resulttable=readRDS("../../results/summarytable.rds")
-knitr::kable(resulttable)
+knitr::include_graphics(here("results","tables", "gt_table.png"))
+
 ```
 
+@fig-result depicts two density plots for the Cumulative Sales across customers and Invoice Sales and a histogram for Customer purchase frequencies. Both density plots are heavily right-skewed.The averages of total sales to a customer and total invoice values appear to be less than 2500 and 1250 sterling pounds respectively supporting the mean values of 2025 and 563 in the descriptive table. The average frequency appears to be less than 5 times which is also observed in the descriptive statistics table.
+
+```{r}
+#| label: fig-result
+#| fig-cap: "Distribution of Sales and Purchase frequency"
+#| echo: FALSE
+knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
+```
 
 
 ## Basic statistical analysis
@@ -167,13 +143,13 @@ knitr::kable(resulttable)
 _To get some further insight into your data, if reasonable you could compute simple statistics (e.g. simple models with 1 predictor) to look for associations between your outcome(s) and each individual predictor variable. Though note that unless you pre-specified the outcome and main exposure, any "p<0.05 means statistical significance" interpretation is not valid._
 
 
-@fig-result shows a scatterplot figure produced by one of the R scripts.
+#@fig-result1 shows a scatterplot figure produced by one of the R scripts.
 
 ```{r}
-#| label: fig-result
+#| label: fig-result1
 #| fig-cap: "Height and weight stratified by gender."
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
+#knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
 ```
 
 
@@ -181,14 +157,14 @@ knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
 
 _Use one or several suitable statistical/machine learning methods to analyze your data and to produce meaningful figures, tables, etc. This might again be code that is best placed in one or several separate R scripts that need to be well documented. You want the code to produce figures and data ready for display as tables, and save those. Then you load them here._
 
-Example @tbl-resulttable2 shows a summary of a linear model fit.
+#Example @tbl-resulttable2 shows a summary of a linear model fit.
 
 ```{r}
 #| label: tbl-resulttable2
 #| tbl-cap: "Linear model fit table."
 #| echo: FALSE
-resulttable2 = readRDS(here("results","tables","summarytable.rds"))
-knitr::kable(resulttable2)
+#resulttable2 = readRDS(here("results","tables","summarytable.rds"))
+#knitr::kable(resulttable2)
 ```
 
 
