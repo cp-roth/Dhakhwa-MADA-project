@@ -21,13 +21,15 @@ library(tibble) # For rownames_to_column
 library(gt) # for table
 library(gridExtra)
 library(webshot2) #Capture as an Image the gttable before converting it to pdf
+library(zoo) #To plot seasonality of sales
 ```
 
 Data is loaded using here function.
 
 ```{r}
 #Path to data using here() package
-data_location <- here::here("data","processed-data","processed_superstore.rds")
+#data_location <- here::here("data","processed-data","processed_superstore.rds")
+data_location <- here::here("data","processed-data","processed_superstore_RFM.rds")
 #load data
 mydata <- readRDS(data_location)
 ```
@@ -46,28 +48,25 @@ saveRDS(summary_df, file = summarytable_file)
 
 # Descriptive Statistics tables
 
-It is important to note that this data accounts sales of a particular item at a time as an observation leading different items sold in the same Invoice to appear as separate observations. As such most of the Invoice numbers appear several times in different observations of the data. A meaningful analysis of customer spending pattern require the Invoice Sales Amount, total purchase by a Customer during a period, frequency of purchase by a customer during a period or a combination of those. A table is created which provides the descriptive statistics of sales by Invoice value, Customer purchase and frequency of customer purchase. This table reveals that there were 1479 transactions to 414 different customers during 2010-12-01 and	2011-12-09.  
+A meaningful analysis of customer spending behavior require the Invoice Sales Amount, total purchase by a Customer during a period, frequency of purchase by a customer during a period or a combination of those. A table is created which provides the descriptive statistics of sales by Invoice value, Customer purchase and frequency of customer purchase. This table reveals that there were 1402 transactions to 399 different customers during 2010-12-01 and	2011-12-09.  
 
 ```{r}
 
 # Aggregate total sales by InvoiceNo for calculating mean, standard deviation, minimum and maximum
 Sales_by_Invoice <- mydata %>%
-  group_by(InvoiceNo) %>%
-  summarise(TotalSales = sum(Sales, na.rm = TRUE)) %>%
-  ungroup() %>% # Ensure we ungroup before further summarisation
-  summarise(
+    summarise(
     Count = n(),
-    Particulars = "Sales by Invoice",
-    Mean = round(mean(TotalSales, na.rm = TRUE), 2),
-    SD = round(sd(TotalSales, na.rm = TRUE), 2),
-    Min = round(min(TotalSales, na.rm = TRUE), 2),
-    Max = round(max(TotalSales, na.rm = TRUE), 2)
+    Particulars = "Invoice Value",
+    Mean = round(mean(InvoiceValue, na.rm = TRUE), 2),
+    SD = round(sd(InvoiceValue, na.rm = TRUE), 2),
+    Min = round(min(InvoiceValue, na.rm = TRUE), 2),
+    Max = round(max(InvoiceValue, na.rm = TRUE), 2)
   )
 
 # Aggregate total sales by CustomerID to calculate mean, standard deviation, minimum and maximum
 TotalSales_customer <- mydata %>%
   group_by(CustomerID) %>%
-  summarise(TotalSales = sum(Sales, na.rm = TRUE)) %>%
+  summarise(TotalSales = sum(InvoiceValue, na.rm = TRUE)) %>%
   ungroup() %>%
   summarise(
     Count = n(),
@@ -134,7 +133,7 @@ A histogram of purchase frequency of each customer is created by grouping each c
 # Aggregate sales by CustomerID
 TotalSales_customer <- mydata %>%
   group_by(CustomerID) %>%
-  summarise(TotalSales = sum(Sales, na.rm = TRUE)) %>%
+  summarise(TotalSales = sum(InvoiceValue, na.rm = TRUE)) %>%
   arrange(desc(TotalSales))
 
 #Density Plot of Sales per Customer
@@ -144,14 +143,8 @@ p1 <- ggplot(TotalSales_customer, aes(x = TotalSales)) +
   labs(title = "Density Plot of Sales across Customers", x = "Total Sales", y = "Density")
 
 # Histogram of Sales by Invoice values
-## First calculate total invoice value per invoice
-Sales_by_Invoice <- mydata %>%
-  group_by(InvoiceNo) %>%
-  summarise(TotalInvoiceValue = sum(Sales, na.rm = TRUE))
 
-
-##Create histogram
-p2 <- ggplot(Sales_by_Invoice, aes(x = TotalInvoiceValue)) +
+p2 <- ggplot(mydata, aes(x = InvoiceValue)) +
   geom_density(fill = "lightgreen", alpha = 0.5) +
   labs(title = "Density Plot of  Invoice Sales",
        x = "Invoice Value", 
@@ -186,24 +179,7 @@ ggsave(filename = figure_file, plot=plot1)
 
 ```
 
-A histogram is also plotted for price range of the products.Most of the products fall below the price of 12.50 sterling pounds.
 
-```{r}
-# Create histogram of Unit Price
-
-p4 <- ggplot(mydata, aes(x = UnitPrice)) +
-  geom_histogram(binwidth = 1, fill = "lightblue", color = "darkblue") + # Adjust binwidth as needed
-  labs(title = "Histogram of Unit Price",
-       x = "Unit Price", 
-       y = "Frequency") +
-  theme_minimal()
-
-p4
-
-figure_file = here("results","figures","Price_range.png")
-ggsave(filename = figure_file, plot=p4)
-
-```
 Next, total purchase by a customer was plotted against purchase frequency.A few outliers were noted. 
 
 ```{r}
@@ -213,22 +189,22 @@ Next, total purchase by a customer was plotted against purchase frequency.A few 
 customer_stats <- mydata %>%
   group_by(CustomerID) %>%
   summarise(PurchaseFrequency = n_distinct(InvoiceNo),
-            TotalInvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+            TotalInvoiceValue = sum(InvoiceValue, na.rm = TRUE)) %>%
   ungroup()  # Ensure the data is ungrouped for further analysis
 
 # Scatter plot of Total Invoice Value by Purchase Frequency
-p5 <- ggplot(customer_stats, aes(x = PurchaseFrequency, y = TotalInvoiceValue)) +
+p4 <- ggplot(customer_stats, aes(x = PurchaseFrequency, y = TotalInvoiceValue)) +
   geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
   geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
   labs(title = "Total Invoice Value by Purchase Frequency",
        x = "Purchase Frequency",
        y = "Total Invoice Value") +
   theme_minimal()
-plot(p5)
+plot(p4)
 
 
 figure_file = here("results","figures","Sales_trend.png")
-ggsave(filename = figure_file, plot=p5)
+ggsave(filename = figure_file, plot=p4)
 
 
 
@@ -237,19 +213,42 @@ ggsave(filename = figure_file, plot=p5)
 Next, Bar chart is created for Sales Distribution by Country. The top five sales are in Germany, France, Spain, Switzerland and Japan. 
 
 ```{r}
-p8 <- mydata %>% 
+p5 <- mydata %>% 
   group_by(Country) %>% 
-  summarise(TotalSales = sum(Sales)) %>%
+  summarise(TotalSales = sum(InvoiceValue)) %>%
   ggplot(aes(x = reorder(Country, TotalSales), y = TotalSales, fill = Country)) + 
   geom_bar(stat = "identity") + 
   coord_flip() + 
   theme(legend.position = "none")
 
-plot(p8)
+plot(p5)
 
 figure_file = here("results","figures","Countrywise_Sales.png")
-ggsave(filename = figure_file, plot=p8)
+ggsave(filename = figure_file, plot=p5)
 ```
+As the store sells gift goods, an inspection is required to check the seasonality of sales. First, monthly total sales is calculated aggregating Invoice Value by months of the Invoice Date.The aggregated sales is then plotted to visualize seasonal trend which depicted a spike in the sales during the last few months of the year.
+
+```{r}
+#Aggregating Sales by months
+mydata_aggregated <- mydata %>%
+  group_by(InvoiceDate = as.yearmon(InvoiceDate)) %>%
+  summarize(TotalValue = sum(InvoiceValue))
+
+# Formatting Date for plotting purposes
+mydata_aggregated$InvoiceDate <- as.Date(as.yearmon(mydata_aggregated$InvoiceDate))
+
+p6<-ggplot(mydata_aggregated, aes(x = InvoiceDate, y = TotalValue)) +
+  geom_line() + 
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") + # Adjust formatting as needed
+  labs(title = "Monthly Sales", x = "Month", y = "Sales Value") +
+  theme_minimal()
+p6
+
+figure_file = here("results","figures","Monthly_Sales.png")
+ggsave(filename = figure_file, plot=p6)
+
+```
+
 
 # Notes
 

@@ -277,14 +277,95 @@ plot(p2)
 
 The distribution of the data appears relatively homogeneous. 
 
+The wholesalers are expected to purchase in large quantity. Additional inspection is carried out to identify wholesalers by quantity purchased and individual Purchase Amount by plotting a scatter plot. 
+
+```{r}
+# Calculate purchase frequency and total invoice value per customer
+customer_stats5 <- clean_data_step4 %>%
+  group_by(InvoiceNo) %>%
+  summarise(InvoiceQty = sum(Quantity, na.rm = TRUE),
+            InvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+  ungroup()  # Ensure the data is ungrouped for further analysis
+
+# Scatter plot of Total Invoice Value by Purchase Frequency
+p3 <- ggplot(customer_stats5, aes(x = InvoiceValue, y = InvoiceQty)) +
+  geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
+  labs(title = "Total Invoice Value by Purchase Frequency",
+       x = "Invoice Amount",
+       y = "Quantity Purchased") +
+  scale_y_continuous(labels = label_comma()) +  # This line changes the y-axis labels
+  
+    theme_minimal()
+plot(p3)
+
+```
+The scatter plot reveals that most of the customers made purchases less than 1000 items and most of the invoice values were less than 2,500. Assuming that the sparsely distributed points represent purchases by wholesalers, observations with Quantity above 1000 and individual Invoice value above 2,500 are removed from the data.
+
+This involves first sub-setting customer_stats5 such that it includes only those observations where InvoiceQty <= 1000 and InvoiceValue <=2500 and finally, merging this sub-set with the original dataset (clean_data_step4).
+
+```{r}
+# Filtering the customer_stats5 to meet the conditions
+filtered_customer_stats5 <- customer_stats5 %>%
+  filter(InvoiceQty <= 1000, InvoiceValue <= 2500)
+
+# Excluding purchase quantities above 1000 and individual invoice values above 2500 from the data
+clean_data_step5 <- clean_data_step4 %>%
+  semi_join(filtered_customer_stats5, by='InvoiceNo')
+
+skimr::skim(clean_data_step5)
+```
+This step excluded 4485 observations from the data for a final total observation of 28117. A similar scatter plot is plotted for the new data.
+
+```{r}
+# Calculate purchase quantity and amount per invoice
+customer_stats6 <- clean_data_step5 %>%
+  group_by(InvoiceNo) %>%
+  summarise(InvoiceQty = sum(Quantity, na.rm = TRUE),
+            InvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+  ungroup()  # Ensure the data is ungrouped for further analysis
+
+# Scatter plot of Purchase Quantity by Invoice Value
+p4 <- ggplot(customer_stats6, aes(x = InvoiceValue, y = InvoiceQty)) +
+  geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
+  labs(title = "Purchase Quantity by Invoice Value",
+       x = "Invoice Amount",
+       y = "Quantity Purchased") +
+  scale_y_continuous(labels = label_comma()) +  # This line changes the y-axis labels
+  
+    theme_minimal()
+plot(p4)
+
+```
+
+
+```{r}
+
+```
+
+
 Assigning a final name to the subset to make it more relevant to the actual data.
 
 ```{r}
-processed_superstore <- clean_data_step4
+processed_superstore <- clean_data_step5
 
 str(processed_superstore)
 ```
+It is important to note that this data accounts sales of a particular item at a time as an observation leading different items sold in the same Invoice to appear as separate observations. As such most of the Invoice numbers appear several times in different observations of the data. A meaningful analysis of customer spending pattern can be done by total Invoice Sales. So another data is created where each Invoice is a unique observation and can be used for groupoing customers based on Recency, Frequency and Monetary value. 
 
+```{r}
+processed_superstore_RFM <- processed_superstore %>%
+  group_by(InvoiceNo) %>%
+  summarise(InvoiceDate = first(InvoiceDate),
+            CustomerID = first(CustomerID),
+            InvoiceValue = sum(Sales, na.rm = TRUE),
+            Country = first(Country)) %>%
+select(InvoiceDate, InvoiceNo, CustomerID, InvoiceValue, Country)
+
+
+str(processed_superstore_RFM)
+```
 
 # Save data 
 
@@ -297,8 +378,12 @@ http://www.sthda.com/english/wiki/saving-data-into-r-data-format-rds-and-rdata
 save_data_location <- here::here("data","processed-data","processed_superstore.rds")
 saveRDS(processed_superstore, file = save_data_location)
 
-
 ```
 
+```{r}
+save_data_location <- here::here("data","processed-data","processed_superstore_RFM.rds")
+saveRDS(processed_superstore_RFM, file = save_data_location)
+
+```
 
 
