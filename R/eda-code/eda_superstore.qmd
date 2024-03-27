@@ -28,7 +28,6 @@ Data is loaded using here function.
 
 ```{r}
 #Path to data using here() package
-#data_location <- here::here("data","processed-data","processed_superstore.rds")
 data_location <- here::here("data","processed-data","processed_superstore_RFM.rds")
 #load data
 mydata <- readRDS(data_location)
@@ -55,9 +54,9 @@ A meaningful analysis of customer spending behavior require the Invoice Sales Am
 # Aggregate total sales by InvoiceNo for calculating mean, standard deviation, minimum and maximum
 Sales_by_Invoice <- mydata %>%
     summarise(
-    Count = n(),
     Particulars = "Invoice Value",
-    Mean = round(mean(InvoiceValue, na.rm = TRUE), 2),
+    Count = n(),
+        Mean = round(mean(InvoiceValue, na.rm = TRUE), 2),
     SD = round(sd(InvoiceValue, na.rm = TRUE), 2),
     Min = round(min(InvoiceValue, na.rm = TRUE), 2),
     Max = round(max(InvoiceValue, na.rm = TRUE), 2)
@@ -69,8 +68,8 @@ TotalSales_customer <- mydata %>%
   summarise(TotalSales = sum(InvoiceValue, na.rm = TRUE)) %>%
   ungroup() %>%
   summarise(
-    Count = n(),
     Particulars = "Cumulative Sales to Individual Customers",
+    Count = n(),
     Mean = round(mean(TotalSales, na.rm = TRUE), 2),
     SD = round(sd(TotalSales, na.rm = TRUE), 2),
     Min = round(min(TotalSales, na.rm = TRUE), 2),
@@ -94,35 +93,17 @@ sales_frequency_per_customer <- mydata %>%
 
 
 # Combine the statistics into a single data frame
-combined_stats <- bind_rows(Sales_by_Invoice, TotalSales_customer, sales_frequency_per_customer) %>%
-  select(Particulars, everything())  # Ensure Particulars column is at the front
+combined_stats <- bind_rows(Sales_by_Invoice, TotalSales_customer, sales_frequency_per_customer)
 
+combined_stats
 
-# Create and format the gt table
-gt_table <- gt(combined_stats) %>%
-  tab_header(
-    title = "Descriptive Statistics of Sales") %>%
-  cols_label(
-    Particulars = "Particulars",
-    Count = "Count",
-    Mean = "Mean",
-    SD = "St.Dev.",
-    Min = "Min",
-    Max = "Max"
-  ) %>%
-  cols_align(
-    align = "center",
-    columns = c("Count", "Mean", "SD", "Min", "Max")
-  )
+#Saving this statistics in the results folder.
 
-# Display the gt table
-print(gt_table)
-
-
-gt_table %>%
-  gtsave(here("results","tables", "gt_table.png"))
+summary_combined = here("results","tables", "combined_stats.rds")
+saveRDS(combined_stats, file = summary_combined)
 
 ```
+
 # Data exploration through figures
 
 Next, density plots were created for Sales across customers and Invoice Values. Both figures are heavily right-skewed.The averages of total sales to a customer and total invoice values appear to be less than 2500 and 1250 sterling pounds respectively supporting the mean values of 2025 and 563 in the descriptive table.
@@ -250,7 +231,5 @@ ggsave(filename = figure_file, plot=p6)
 ```
 
 
-# Notes
 
-For your own explorations, tables and figures can be "quick and dirty". As long as you can see what's going on, there is no need to polish them. That's in contrast to figures you'll produce for your final products (paper, report, presentation, website, etc.). Those should look as nice, polished and easy to understand as possible.
 

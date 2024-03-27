@@ -32,43 +32,28 @@ _Write a summary of your project._
 ## General Background Information
 _Provide enough background on your topic that others can understand the why and how of your analysis
 
-This project aims to explore customer segmentation through the supervised and un-supervised learning perspectives. In the initial phase, the analysis applies and investigates the effectiveness of logistic regression to segregate customers based on the general patterns of customer behavior. As the study advances, it integrates more advanced tools, such as Expectation Maximization algorithms. 
+This project aims to leverage statistical modeling techniques to predict customer segmentation based on their purchasing behavior pattern, using both supervised and unsupervised learning approaches. In the initial phase, the analysis employs logistic regression to segregate customers based on the general patterns of purchasing behavior. As the study advances, it integrates Machine Learning Tools into the analysis. 
 
-It is crucial that organizations understand their customer’s purchasing patterns to design and execute effective and customized  engagement strategies. This helps businesses enhance customer service, consequently increase sales. Based on characteristics like spending and purchase frequency, businesses can segment customers and tailor their marketing and sales efforts to meet the unique needs of each group. This personalized approach can enhance customer satisfaction and also improve multiple end results like customer loyalty, operational efficiency, and profitability.
+It is crucial that organizations understand their customer’s purchasing patterns to devise and implement effective, personalized engagement strategies. By analyzing behaviors such as spending habits and purchase frequency, businesses can segment their customers and tailor marketing and sales efforts to cater to the unique needs of each segment. This personalized approach can not only boost customer satisfaction but also improve multiple end results like customer loyalty, operational efficiency, and profitability.
 
-The original data does not have the customers categorized into a group. To use logistic regression, a group variable is created based on the purchase amount and frequency. 
+Given the absence of pre-categorized customer groups in the original data, a grouping variable is engineered based on purchase amount and frequency to facilitate the statistical analysis. 
 
 ## Description of data and data source
 _Describe what the data is, what it contains, where it is from, etc. Eventually this might be part of a methods section._
 
-This study utilizes the 'superstoredata'dataset, focusing on international sales from an online retail store. 
+This study utilizes the 'superstoredata' dataset which is a transactional dataset of a UK-based, non-store online retail operation spanning from December 1, 2010, to December 9, 2011. The store specializes in unique all-occasion gifts to a clientele which includes UK and non-UK based retail and wholesale customers. This study focuses on international sales of the store. 
+The dataset features nine variables, detailing transaction numbers, product codes, product description, quantities sold, transaction dates, unit prices, customer IDs, country of residence of the customer, and sales amounts.
+Initially this data was downloaded from Kaggle for a preliminary assessment of its usability for this project. However, when revisiting the site for further details, it was no longer available on Kaggle.com. A subsequent Google search led to the discovery of the dataset in the [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Online+Retail). 
 
-Initially this data was downloaded from Kaggle for a preliminary assessment of it's usability for this project. However, when revisiting the site for further details, it was no longer available on Kaggle.com. A subsequent Google search led to the discovery of the dataset in the [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Online+Retail). Per the repository, this is a transnational data set spanning from December 1, 2010, to December 9, 2011 from a UK-based, non-store online retail operation. The company specializes in unique all-occasion gifts to a clientele which also includes wholesalers.
-
-This data has nine variables as detailed below:
-
-(1)	InvoiceNo: It is a categorical variable with a 6-digit integral number uniquely assigned to each transaction. If this code starts with the letter ‘c’, it indicates a cancellation. 
-(2)	StockCode: It is a categorical variable with a 5-digit integral number uniquely assigned to each distinct product.
-(3)	Description: This represents Product name and is a categorical variable.
-(4)	Quantity: It represents quantities of each product (item) per transaction and is an integer.
-(5)	InvoiceDate: It represents the day and time each transaction was generated.
-(6)	UnitPrice: It represents product price per unit in sterling.
-(7)	CustomerID: It is a categorical variable with a 5-digit integral number uniquely assigned to each customer.
-(8)	Country: It represents the name of the country where each customer resides.
-(9) Sales: It represents product price multiplied by UnitPrice.
 
 ## Questions/Hypotheses to be addressed
 _State the research questions you plan to answer with this analysis._
 
-The objective is to understand customer segmentation from logistic regression and advanced analytical tools such as Mixture Models.
-
+What statistical modeling techniques are most effective in replicating and predicting customer segmentation,based on their purchase behavior pattern, as indicated by purchase amount, purchase frequency and purchase recency?
 
 # Methods 
 
 _Describe your methods. That should describe the data, the cleaning processes, and the analysis approaches. You might want to provide a shorter description here and all the details in the supplement._
-
-## Schematic of workflow
-_Sometimes you might want to show a schematic diagram/figure that was not created with code (if you can do it with code, do it). is an example of some - completely random/unrelated - schematic that was generated with Biorender. We store those figures in the assets folder.
 
 
 ## Data import and cleaning
@@ -82,23 +67,23 @@ As the project focuses on international customers, initial data cleaning involve
 
 The preliminary inspection identified several issues needing attention such as missing values in 'CustomerID', negative 'signs in 'Quantity' and 'Sales' values, and incorrectly formatted dates. Variables, 'InvoiceNo', 'StockCode', 'Description' and 'Country', originally coded as characters, were converted to factor types to facilitate better data manipulation.
 
-1480 observations lacked 'CustomerID' and were removed, as customer behavior cannot be tracked without the unique identifier and 'CustomerID' was converted to factor type from numeric type. 'Country', 'Description' and 'StockCode' were converted to factors from character variables and transaction date to the date format.
+1480 observations lacked 'CustomerID' and were removed, as customer purchase pattern cannot be tracked without the unique identifier and 'CustomerID' was converted to factor type from numeric type. 'Country', 'Description' and 'StockCode' were converted to factors from character variables and transaction date to the date format.
 
 There were 1372 observations with negative values in quantity and sales due to order cancellation which were excluded from the data.  
 
 An examination of 'UnitPrice' distribution revealed that all the high value goods with a Unitprice above 25 were distributed between 75 and 100 percentile. A closer inspection at this inter-quartile range disclosed that there were 19 product description categories with the Unitprice above 25. Some of those categories had descriptions such as CARRIAGE, POSTAGE, Manual, which appeared to be related to logistics. 1216 observations with such descriptions were dropped from the data since those were less likely to be directly related to customer purchase. 
 
 ### Refining the Dataset
-The store also sells merchandises in wholesale quantities. A wholesaler potentially had larger purchases and in higher frequencies. In absence of clear information on wholesalers, a scatter plot of Cumulative Invoice Value of customers by Purchase Frequency was plotted to identify potential wholesalers. The scatter plot revealed that most of the customers made purchases less than a frequency of 50 and that most cumulative purchase values were less than 50,000. Assuming that the outliers represented purchases by wholesalers, observations with purchase frequencies above 50 and cumulative Invoice values above 50,000 were dropped from the data. This step excluded 9745 observations from the data. The cleaned data has 32602 observations with 9 variables. Next, the quantities purchased in each invoice were plotted against the individual invoice value. The scatter plot revealed that the observations were concentrated within the purchase quantity below 1000 items and invoice amounts of 2,500. Assuming that the sparsely distributed points represent purchases by wholesalers, observations with Quantity above 1000 and individual Invoice value above 2,500 were further removed from the data.This step excluded 4485 observations for a final total observation of 28117.
+The store also sold merchandises in wholesale quantities. A wholesaler potentially had larger purchases and in higher frequencies. In absence of clear information on wholesalers, a scatter plot of Cumulative Invoice Value of customers by Purchase Frequency was plotted to identify potential wholesalers. The scatter plot revealed that most of the customers made purchases less than a frequency of 50 and that most cumulative purchase values were less than 50,000. Assuming that the outliers represented purchases by wholesalers, observations with purchase frequencies above 50 and cumulative Invoice values above 50,000 were dropped from the data. This step excluded 9745 observations from the data. The cleaned data at this point had 32602 observations with 9 variables. Next, the quantities purchased in each invoice were plotted against the individual invoice values. The scatter plot revealed that the observations were concentrated within the purchase quantity below 1000 items and invoice amounts of 2,500. Assuming that the sparsely distributed points represent purchases by wholesalers, observations with Quantity above 1000 and individual Invoice value above 2,500 were further removed from the data.This step excluded 4485 observations for a final total observation of 28117.
 
 The study of customer spending pattern requires the knowledge of each individual transaction amount. The subsequent cleaning process reorganized the dataset by 'InvoiceNo', consolidating sales data under each invoice. This final data is saved as processed_superstore_RFM in the data > processed-data. 
 
 ### RFM Classification
-In absence of a labeled categorical variable for classification, the study segmented customers into two distinct groups using a recency, frequency and monetary (RFM) model. RFM model is a commonly used behavior-based model in analysing customer behavior [@yeh2009knowledge]. Recency is measured in days or months and represent the interval between the most recent transaction time and the time of analysis, and a lower number interval is preferred. Frequency is the number of purchases made in a certain period, and monetary is the total amount the customer spent during that time period.[@wei2010review]
+In absence of a pre-existing customer groups, the study segmented customers into two distinct groups using a recency, frequency and monetary (RFM) model. RFM model is a commonly used behavior-based model in analysing customer behavior [@yeh2009knowledge]. Recency is measured in days or months and represent the interval between the most recent transaction time and the time of analysis, and a lower number interval is preferred. Frequency is the number of purchases made in a certain period, and monetary is the total amount the customer spent during that time period.[@wei2010review]
 
-In the RFM classification process, the Recency, Frequency and Monetary values were calculated for each customer, ensuring that each customer was represented only once in the modified dataset.Frequency in this data is the total no. of Invoices issued to the customer, and Monetary is the total purchases made by the customer during the stipulated period. Recency was calculated from the next day of the transaction period. Each customer was assigned a value ranging from 1 to 4 for the Recency, Frequency and Monetary attributes, reflecting their quartile position within each metric. Subsequently, these metrics were combined to formulate a three-digit score for every custoemr, positioning the Monetary value in the hundreds place, Frequency in the tens place, and Recency in the units place. All the customers with a score above 344 were assigned as High-Value Customers.
+In the RFM classification process, the Recency, Frequency and Monetary values are calculated for each customer, ensuring that each customer was represented only once in the modified dataset.Frequency in this data is the total no. of Invoices issued to the customer, and Monetary is the total purchases made by the customer during the stipulated period. Recency was calculated from the next day of the transaction period. Each customer was assigned a value ranging from 1 to 4 for the Recency, Frequency and Monetary attributes, reflecting their quartile position within each metric. Subsequently, these metrics were combined to formulate a three-digit score for every custoemr, positioning the Monetary value in the hundreds place, Frequency in the tens place, and Recency in the units place. All the customers with a score above 344 were assigned as High-Value Customers.
 
-Following RFM segmentation, logistic regression was applied to predict customer group membership. This method utilized the segments derived from RFM as the dependent variable, with the Recency, Frequency and Monetary attritubtes serving as independent variables. The objective is to develop a model for predictive analysis based on those segments.
+Following RFM segmentation, logistic regression is applied to predict customer group membership. This method utilized the segments derived from RFM as the dependent variable, with the Recency, Frequency and Monetary attributes serving as independent variables. The objective is to develop a model for predictive analysis based on those segments.
 
 ## Statistical analysis
 _Explain anything related to your statistical analyses._
@@ -116,7 +101,8 @@ _Explain anything related to your statistical analyses._
 #| label: tbl-resulttable1
 #| tbl-cap: "Descriptive Statistics"
 #| echo: FALSE
-knitr::include_graphics(here("results","tables", "gt_table.png"))
+resulttable1 = readRDS(here("results", "tables", "combined_stats.rds"))
+knitr::kable(resulttable1)
 
 ```
 
@@ -130,7 +116,7 @@ knitr::include_graphics(here("results", "figures", "Customer_Segment.png"))
 ```
 
 
-@fig-result2 depicts two density plots for the Cumulative Sales and Invoice Values across customers and a histogram for Customer purchase frequencies. Both density plots are heavily right-skewed.T0he averages of total sales to a customer and total invoice values appear to be less than 2500 and 500 sterling pounds, respectively, supporting the mean values of 1532 and 436 in the descriptive table. The average frequency appears to be less than 5 times, which is also observed in the descriptive statistics table.
+@fig-result2 depicts two density plots for the Cumulative Sales and Invoice Values across customers and a histogram for Customer purchase frequencies. Both density plots are heavily right-skewed.The averages of total sales to a customer and total invoice values appear to be less than 2500 and 500 sterling pounds, respectively, supporting the mean values of 1532 and 436 in the descriptive table. The average frequency appears to be less than 5 times, which is also observed in the descriptive statistics table.
 
 ```{r}
 #| label: fig-result2
@@ -169,7 +155,7 @@ _To get some further insight into your data, if reasonable you could compute sim
 
 Penalized logistic regression of customer segment was performed on Recency, Frequency and Monetary variables using 'tidymodels' package and 4-fold corss-validation techniques. 
 
-@fig-result6 depicts the area under ROC curve by the range of penalty values. It provides visualization of validation set metrics. The curve has extreme high values, all above 0.9995. A sharp drop is noticed before the penalty value of 0.0010, suggesting the sensitivity of the performance of the model at this penalty value. This is followed by a sharp rise after the penalty value of 0.01.  These features of model performance are indicative of model overfitting to the training data and the data being easily separable.
+@fig-result6 depicts the area under ROC curve by the range of penalty values. It provides visualization of validation set metrics. The curve has extreme high values, all above 0.9995. A sharp drop is noticed before the penalty value of 0.0010, suggesting the sensitivity of the performance of the model at this penalty value. This is followed by a sharp rise after the penalty value of 0.01.  These features of model performance are indicative of the training data and the data being easily separable.
 
 
 ```{r}

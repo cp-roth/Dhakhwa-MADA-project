@@ -1,10 +1,4 @@
-This folder contains a simple made-up data-set in an Excel file.
+This folder contains the data 'superstore' which covers the sales data of a retailer for a period of one year.
 
-It contains the variables `Height`, `Weight` and `Gender` of a few imaginary individuals.
-
-The dataset purposefully contains some faulty entries that need to be cleaned.
-
-Generally, any dataset should contain some meta-data explaining what each variable in the dataset is. (This is often called a **Codebook**.) For this simple example, the codebook is given as a second sheet in the Excel file.
-
-This raw data-set should generally not be edited by hand. It should instead be loaded and processed/cleaned using code.
+It contains the variables `InvoiceNo`, `StockCode`, `Gender`, `Description`, `InvoiceDate`, `Quantity`, `UnitPrice`, `CustomerID`, `Country` and `Sales`. The first 5 variables are coded as categorical variables and last 5 are coded as numerical variables which need to be cleaned. The data is cleaned using the 'processing_superstore-v1.qmd' at R\processing-code\ and stored as processed_superstore_RFM in the processed-data folder.
 

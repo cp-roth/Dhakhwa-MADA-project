@@ -1,9 +1,8 @@
-Place your various R or Quarto files in the appropriate folders.
 
-You can either have fewer large scripts, or multiple scripts that do only specific actions. Those can be R or Quarto files. In either case, document the scripts and what goes on in them so well that someone else (including future you) can easily figure out what is happening.
+The subfolders in this folder contains R and Quarto script files executing differnt actions. 
 
-The scripts should load the appropriate data (e.g. raw or processed), perform actions, and save results (e.g. processed data, figures, computed values) in the appropriate folders. Document somewhere what inputs each script takes and where output is placed. 
+Processing-code folder contains a QMD file which loads the raw data superstoredata.csv, cleans it and stores it as processed_superstore_RFM.rds in the processed-data folder of the data folder. This script SHOULD BE RUN first before the exploratory and/or statistical analysis. 
 
-If scripts need to be run in a specific order, document this. Either as comments in the script, or in a separate text file such as this readme file. Ideally of course in both locations.
+eda-code folder contains a Quarto file which runs exploratory analysis of the processed data, processed_superstore_RFM.rds and stores figures in results/figures folder and tables in the  results/tables folder. 
 
-Depending on your specific project, you might want to have further folders/sub-folders.
+analysis-code folder contains a R file which performs statistical analysis of the processed data, processed_superstore_RFM.rds. 

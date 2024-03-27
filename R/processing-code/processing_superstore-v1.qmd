@@ -44,7 +44,9 @@ skimr::skim(raw_data)
 ```
 # Cleaning
 
-The purpose of this project is to study purchase pattern of customers residing outside of UK.The data set data_without_uk excludes all sales in the UK. It has 46431 observations with 9 variables. It is important to note that this data set accounts sales of a particular item as an observation. This means different items sold in the same Invoice appears as separate observations and it is most likely that an Invoice number could appear in separate observations. 
+The purpose of this project is to group customers based on their purchase pattern. It uses a transnational data set 'superstoredata' spanning from December 1, 2010, to December 9, 2011 from a UK-based, non-store online retail operation. The company specializes in unique all-occasion gifts to a clientele which also includes wholesalers.
+
+The project focuses on customers residing outside of UK.In the first step of cleaning, all sales in the UK was excluded. The data set data_without_uk excludes all sales in the UK. It has 46431 observations with 9 variables. It is important to note that this data set accounts sales of a particular item as an observation. This means different items sold in the same Invoice appears as separate observations and it is most likely that an Invoice number could appear in separate observations. 
 
 ```{r}
 # Exclude "United Kingdom" from the data set
@@ -371,14 +373,6 @@ str(processed_superstore_RFM)
 
 Finally, the cleaned data is saved as RDS file. As learnt in the class, saving the cleaned data as RDS or RDA/Rdata files, preserves coding like factors, characters, numeric, etc.  Saving as CSV, that information would get lost. However, CSV is better for sharing with others since it's plain text. 
 
-See here for some suggestions on how to store your processed data:
-http://www.sthda.com/english/wiki/saving-data-into-r-data-format-rds-and-rdata
-
-```{r}
-save_data_location <- here::here("data","processed-data","processed_superstore.rds")
-saveRDS(processed_superstore, file = save_data_location)
-
-```
 
 ```{r}
 save_data_location <- here::here("data","processed-data","processed_superstore_RFM.rds")
