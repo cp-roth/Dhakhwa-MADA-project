@@ -1,0 +1,607 @@
+
+---
+title: "Analysis Script"
+---
+## Full Analysis
+
+This script loads the processed, cleaned data, does a simple analysis and saves the results to the results folder
+
+First, required packages are installed and loaded.
+
+```{r}
+#| message: false
+#| warning: false
+
+library(dplyr) #for data processing/cleaning
+library(tidyr) #for data processing/cleaning
+library(skimr) #for nice visualization of data 
+library(here) #to set paths
+library(ggplot2) # for plots
+library(tidymodels)
+library(glmnet) ##for fitting GLM via penalized maximum likelihood
+library(broom) #for cleaning up output from lm()
+library(lubridate)
+library(forcats) # for clubbing the factor variables
+library(GGally)#for correlation plots
+library(ranger) #for random forest.
+library(dials) #for tuning parameters
+library(patchwork)# For illustrating plots side by side
+library(vip)#variable importance plots
+```
+
+Setting a random seed during analysis step
+
+```{r}
+rngseed = 1234
+```
+
+Path to data using here() function
+
+```{r}
+# path to data using here function
+data_location <- here::here("data","processed-data","processed_superstore_RFM.rds")
+
+#load data. 
+mydata <- readRDS(data_location)
+
+```
+
+Checking the data
+
+```{r}
+
+skimr::skim(mydata)
+```
+
+This study aims to use logistic regression to segment customers based on their purchasing behavior reflected by the monetary purchase amount and loyalty of the customer. In absence of a readily available classification variable in the data, one will be created based on three factors: Recency, Frequency and Monetary. 
+Recency is the number of days since the last purchase by a customer. 
+Frequency is the no. of purchases by a customer over a given period.
+Monetary is the total amount of purchase a customer has made over a period. 
+
+For determining recency of a transaction, a reference date past the study period is required. The data covers transactions till 2011-12-09. The next day i.e. 2011-12-10 is considered as the reference date to measure recency.
+```{r}
+ref_date <- as.Date("2011-12-10")
+```
+
+Next, a new data frame is created which includes the segments, Recency, Frequency and Monetary
+
+```{r}
+rfm_data <- mydata %>%
+  group_by(CustomerID) %>%
+  summarise(
+    Recent_Purchase_Date=last(InvoiceDate),
+    Recency = as.numeric(ref_date - as.Date(max(InvoiceDate))),
+    Frequency = n_distinct(InvoiceNo),
+    Monetary = sum(InvoiceValue)
+    
+  ) %>%
+  ungroup()
+
+skimr::skim(rfm_data)
+```
+
+### Pairwise correlations
+
+Next, I created a pairwise correlation plot for the continuous variables to check if any two variables are highly correlated. 
+
+```{r}
+#| message: false
+#| warning: false
+
+#Using ggpairs to create the correlation plot
+cor_pairs <- rfm_data[, c("Monetary", "Frequency", "Recency")]
+
+p_correlations<-ggpairs(cor_pairs,
+        upper = list(continu = wrap("cor", size = 5)),#Display correlation coefficients
+        lower = list(continuous = "smooth") #Display scatter plots with smooth lines
+        )
+
+p_correlations
+
+figure_file_correlations = here("results","figures","correlations.png")
+ggsave(filename = figure_file_correlations, plot=p_correlations)
+
+```
+The correlation between Frequency and Monetary is observed to be 0.787, between Recency and Monetary is -0.334 and between Recency and Frequency is -0.376. The correlations are not excessiveindicating that collinearity is unlikely to be and issue for the analysis.
+
+### Feature Engineering
+
+
+Each segment is additionally divided into 4 categories based on which quartile of Recency, Frequency and Monetary value the customer belongs to. For example a customer belonging to 3rd quartile of Recency, 1st quartile of Frequency and 4th quartile of Monetary value, will get a value of 3 for Recency, 1 for Frequency and 4 for Monetary value columns.
+
+```{r}
+# Creating quartiles
+rfm_data <- rfm_data %>%
+  mutate(
+    R_Quartile = ntile(Recency, 4),
+    F_Quartile = ntile(Frequency, 4),
+    M_Quartile = ntile(Monetary, 4)
+  )
+```
+
+The value of 4 for F_Quartile and M_Quartile represents the preferred customer outcomes which are higher frequency and values of purchases respectively. Contrarily, the value of 4 for R-Quartile indicates that the customer had not made a purchase in long time which is not a favorable outcome. To create a uniform direction of preferability for all three metric values, the original value of R_Quartile is subtracted by 5. With this adjustment, now the value 4 for R_Quartile indicates that the customer has recently purchased from the store.  
+
+Adjusting the quartile ranking for Recency metric
+
+```{r}
+rfm_data$R_Quartile_adj <- 5 - rfm_data$R_Quartile
+#Checking the data
+skimr::skim(rfm_data)
+```
+
+The customers are ranked in the order of their purchase amount, frequency of purchase and recent purchases, a combined score (RFM_Score) is derived based on which quartile the customer falls in for each of these metrics. This score will be used to label valued customers.
+
+```{r}
+rfm_data <- rfm_data %>%
+  mutate(RFM_Score = M_Quartile*100 + F_Quartile * 10 + R_Quartile_adj)%>%
+  arrange(desc(RFM_Score))
+
+```
+
+Checking unique RFM_score in the data
+```{r}
+unique_score <- unique(rfm_data$RFM_Score)
+print(unique_score)
+length(unique_score)
+```
+Counting the no. of observations in unique RFM_scores
+
+```{r}
+score_counts <- table(rfm_data$RFM_Score)
+score_counts
+
+summary(rfm_data$RFM_Score)
+```
+
+There were 55 unique RFM scores identified.The top 25% percentage of customers have a RFM_score above 344. Setting 344 as a threshold for classifying customers as valued customers.
+
+```{r}
+rfm_data$ValuedCust <- as.factor(ifelse(rfm_data$RFM_Score > 344, 1, 0))
+glimpse(rfm_data)
+```
+
+Creating a box plot to visualize the segments.
+```{r}
+p2 <- ggplot(rfm_data, aes(x = ValuedCust)) +
+  geom_bar(fill='light blue') +
+  labs(title = "Customer Segment", x="Valued Customers",y = "Count")+
+  theme_minimal()
+plot(p2)
+
+figure_file = here("results","figures","Customer_Segment.png")
+ggsave(filename = figure_file, plot=p2)
+```
+
+```{r}
+#Creating data set for analysis
+final_data <- rfm_data %>% select(Monetary, Frequency, Recency, ValuedCust)
+```
+
+## Model Building
+The next step is the analysis phase, which involves fitting various models with all predictors.
+1. Logistic Regression
+2. Logistic Regression with cross-validation
+3. Random Forest (RF)
+
+###Logistic Regression
+First I fitted logistic regression without applying cross-validation. I splitted 75% of the data to training set and 25% to test set. The following codes are an attempt to build a model using the training set.  
+```{r}
+#Splitting 75% of the data to training set and 25% to test set
+data_split <- initial_split(final_data, prop = 0.75)
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+
+# Defining the logistic regression model specification
+logistic_spec <- logistic_reg() %>%
+  set_engine("glm") %>%
+  set_mode("classification")
+
+# Fitting the model to the training data 
+logistic_fit_all <- logistic_spec %>%
+  fit(ValuedCust ~ Monetary + Frequency + Recency , data = train_data)
+```
+R returned a warning that the algorithm did not converge and that the fitted probabilities numerically 0 or 1 occurred.
+I computed the accuracy and AUC
+
+```{r}
+# Computing the accuracy and AUC of the model
+model_acc <- logistic_fit_all %>% 
+  predict(train_data) %>% 
+  bind_cols(train_data) %>% 
+  metrics(truth = ValuedCust, estimate = .pred_class) %>% 
+  filter(.metric == "accuracy") 
+model_auc <-  logistic_fit_all %>%
+  predict(train_data, type = "prob") %>%
+  bind_cols(train_data) %>%
+  roc_auc(truth = ValuedCust, .pred_1)
+# Combine the statistics into a single data frame
+logistic_combined_stats <- bind_rows(model_acc, model_auc)
+logistic_combined_stats
+
+#Saving this statistics in the results folder.
+
+logistic_combinedstat = here("results","tables", "logit_combinedstats.rds")
+saveRDS(combined_stats, file = logistic_combinedstat)
+
+```
+The model has an accuracy of 1 however, roc_auc of 0.
+
+##Logistic Regression with cross-validation
+
+In the following steps I used penalized logistic regression with the help of tidymodels package (https://www.tidymodels.org/start/case-study/)
+
+```{r}
+#Checking proportion of Valued Customers
+final_data %>% 
+  count(ValuedCust) %>%
+  mutate(prop = n/sum(n))
+```
+
+```{r}
+set.seed(rngseed) #For reproducibility
+
+#using stratified random sampling as 'Valued Customer' is imbalanced
+splits <- initial_split(final_data, strata = ValuedCust)
+
+final_data_train <- training(splits)
+final_data_test <- testing(splits)
+
+#training set proportions by 'ValuedCust'
+
+final_data_train %>%
+  count(ValuedCust)%>%
+  mutate(prop = n/sum(n))
+
+#test set proportions by 'ValuedCust'
+final_data_test %>%
+  count(ValuedCust) %>%
+  mutate(prop=n/sum(n))
+```
+
+```{r}
+#Defining 10-fold cross-validation on the training data, using stratification
+
+set.seed(rngseed)
+cv_folds<-vfold_cv(final_data_train, v=10, strata = ValuedCust)
+
+cv_folds
+
+```
+
+Using glmnet engine to specify a penalized logistic regression model. tune()is model hyperparameter that will be used to tune to find the best value for making predictions with the data. Setting mixture=1 potentially remove irrelevant predictors and choose a simple model
+
+```{r}
+lr_mod <- 
+  logistic_reg(penalty = tune(), mixture = 1)%>%
+  set_engine("glmnet")
+```
+
+Creating recipe. It helps preprocess the data before training the model.It is built as a series of pre-processing steps.
+
+```{r}
+lr_recipe <- 
+  recipe(ValuedCust ~ ., data = final_data_train)%>%
+  step_normalize(all_date_predictors()) #centers and scales numeric variable
+```
+
+Creating the workflow: bundling the model and recipe into a single workflow(). This makes management of the R objects easier.
+
+```{r}
+lr_workflow <- 
+  workflow() %>%
+  add_model(lr_mod) %>%
+  add_recipe(lr_recipe)
+
+
+# Define a penalty parameter object
+penalty_param <- penalty(range = c(-5, 2))
+
+# Create a grid of potential penalty values (log scale)
+lr_reg_grid <- grid_regular(penalty_param, levels = 50)
+
+#lambda_values <- 10^seq(-5, 2, length.out = 50)
+#lr_reg_grid <- grid_regular(penalty = lambda_values, levels = 50)
+
+#Creating the grid for tuning using a one-column tibble with 30 candidate values:
+#lr_reg_grid <- penalty(range = c(-5, 2)) %>% 
+ # grid_regular(levels = 50)
+
+lr_reg_grid %>% top_n(-5) #lowest penalty values
+lr_reg_grid %>% top_n(5) # highest penalty values
+```
+
+Training and tuning the model. Control_grid() saves the validation set predictions so that diagnostic information is available after the model fit.
+Area under ROC Curve measures the model performance across a continuum of event thresholds
+
+```{r}
+lr_res <-
+    tune_grid(lr_workflow,
+             resamples=cv_folds, #Using CV folds
+             grid = lr_reg_grid,
+            control = control_grid(save_pred = TRUE),
+            metrics = metric_set(roc_auc))
+
+#Visualizing the validation set metrics by plotting the area under the ROC curve
+#against the range of penalty values
+lr_plot <-
+    lr_res%>%
+    collect_metrics()%>%
+    ggplot(aes(x=penalty, y=mean))+
+    geom_point()+
+    geom_line() +
+    ylab("Area under the ROC Curve")+
+    scale_x_log10(labels= scales::label_number())
+
+lr_plot 
+
+figure_file = here("results","figures","ROC(AUC)_Penalty.png")
+ggsave(filename = figure_file, plot=lr_plot)
+```
+
+The ROC curve looks unusually perfect. I am still trying to find out why it is so. Is it because the data is very simple and too easy to classify?    
+
+```{r}
+# Selecting the best model automatically
+lr_best1 <- select_best(lr_res, metric="roc_auc")
+
+lr_best<- lr_res %>% 
+  filter_parameters(parameters = lr_best1)%>% 
+  collect_metrics()
+lr_best
+
+lr_auc <-
+  lr_res %>% 
+  collect_predictions(parameters = lr_best) %>%
+  #names()
+  roc_curve(ValuedCust, .pred_1)%>%
+  mutate(model="Logistic Regression")
+
+p4<-autoplot(lr_auc)
+
+p4
+
+figure_file = here("results","figures","ROC(AUC)_Validation.png")
+ggsave(filename = figure_file, plot=p4)
+```
+The curve stays below the diagonal line for the entire range of 1-specificity indicating that the model choice is notappropriate.
+
+In the below codes, I am double checking the results by creating a confusion matrix. First I created an object best_predictions based on the best hyperparameters. Then I merged it with the training data, calculated performance metrics, confusion matrix and roc_auc.  
+
+```{r}
+#checking the best hyperparameters 
+best_predictions <- lr_res %>% 
+  collect_predictions(parameters = lr_best)
+
+# Creating a predicted class column based on a threshold of 0.5
+best_predictions <- best_predictions %>%
+  mutate(.pred_class = if_else(.pred_1 > 0.5, 1, 0), #classifying prediction above 0.5 as 1 and other as 0
+         .pred_class=factor(.pred_class, levels=c(0,1), labels=c("0", "1")),#converting the numeric variables to factor for confusion matrix
+         ValuedCust_best=ValuedCust)%>% #
+         select(-ValuedCust)
+  
+#Creating row id which will be used to merge with the object best_predictions
+final_data_train_observed <- final_data_train %>%
+  mutate(row_id = row_number())
+
+# Joining the predictions with the observed values based on the row identifier
+comparison <- final_data_train_observed %>%
+  left_join(best_predictions, by = c("row_id" = ".row"))
+
+# Calculating performance metrics
+metrics <- comparison %>%
+  yardstick::metrics(truth = ValuedCust, estimate = .pred_class)
+
+# Calculating confusion matrix
+conf_matrix <- comparison %>%
+  yardstick::conf_mat(truth = ValuedCust, estimate = .pred_class)
+
+#Calculating roc_auc to compare with the confusion matrix 
+lr_auc_table1 <- comparison %>%
+  yardstick::roc_auc(truth = ValuedCust, .pred_1)
+
+# Viewing the results
+print(metrics)
+print(conf_matrix)
+print(lr_auc_table1)
+
+```
+The confusion matrix suggests that the model perform very well on the training data as it almost perfectly identifies both classes. The roc_auc value does not align with the confusion matrix results.I re-calculated the ROC AUC using .pred_0 
+
+
+```{r}
+#ROC AUC calculation based on .pred_0
+lr_auc_table2 <- comparison %>%
+  yardstick::roc_auc(truth = ValuedCust, .pred_0)
+
+lr_auc_table2
+
+#Visualizing the validation set ROC curve based on .pred_0
+lr_auc_rev <-
+  lr_res %>% 
+  collect_predictions(parameters = lr_best) %>%
+  #names()
+  roc_curve(ValuedCust, .pred_0)%>%
+  mutate(model="Logistic Regression")
+
+p5<-autoplot(lr_auc_rev)
+
+p5
+
+figure_file = here("results","figures","ROC(AUC)_Validation_rev.png")
+ggsave(filename = figure_file, plot=p5)
+```
+The roc-auc values aligns with the confusion matrix using the predicted probabilities for the negative class i.e. '.pred_0'.
+The model seems to perform exceptionally well. The model shows high sensitivity for class 1 and high specificity for class 0, with correctly identifying almost all classes. This excellent performance may also suggest overfitting, which occurs when a model learns the training data too closely. In the next step, I applied the model to the test data to see its performance on unseen data.   
+  
+###Applying the Model on Test Data
+
+```{r}
+# Step 1: Finalizing the Model
+final_lr_mod <- logistic_reg(penalty = lr_best$penalty, mixture = 1) %>%
+  set_engine("glmnet")
+
+# Step 2: Fitting the Final Model on the entire training data
+final_lr_recipe <- recipe(ValuedCust ~ ., data = final_data_train) %>%
+  step_normalize(all_predictors(), -all_outcomes())
+
+final_lr_workflow <- workflow() %>%
+  add_model(final_lr_mod) %>%
+  add_recipe(final_lr_recipe) %>%
+  fit(data = final_data_train)
+
+# Step 3: Predicting on Test Data
+predictions <- predict(final_lr_workflow, final_data_test, type = "prob")
+
+# Adding a column for the predicted class based on the probability threshold of 0.5
+predictions <- predictions %>%
+  mutate(predicted_class = if_else(.pred_1 > 0.5, "ValuedCust", "NotValuedCust"))
+#predictions
+
+# Step 4: Evaluate Model Performance
+test_results <- final_data_test %>%
+  bind_cols(predictions) %>%
+  roc_curve(truth = ValuedCust, .pred_0) %>%
+  autoplot()
+test_results
+
+p6<-test_results
+
+p5+p6
+
+figure_file = here("results","figures","ROC(AUC)_traintest.png")
+ggsave(filename = figure_file, plot=p5+p6)
+
+```
+The roc_auc curve suggests that the model is also performing exceptionally well on the test data in classifying the two classes, with high accuracy, sensitivity and specificity. The data is relatively straightforward. This may have made it easier for the model to learn and predict accurately on the test data. 
+
+###Random Forest (RF)
+
+In the following steps I used Random Forest to model the customer classification. 
+
+First I created the workflow following setting up the model for tuning and preparing recipe for the Random Forest model. I set up the no. of trees at 1000.
+```{r}
+#Setting up the model for tuning
+rf_mod <- 
+  rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>% 
+  set_engine("ranger", seed=rngseed) %>% 
+  set_mode("classification")
+
+#Recipe for RF model
+rf_recipe <- 
+  recipe(ValuedCust ~ ., data = final_data_train)
+
+#workflow for tunable RF model
+rf_workflow <- 
+  workflow() %>% 
+  add_model(rf_mod) %>% 
+  add_recipe(rf_recipe)
+
+#rf_mod
+#extract_parameter_set_dials(rf_mod)
+```
+
+I fitted the RF model using a space-filling design to tune, with 25 candidate models and plotted the results of the tuning process. 
+
+```{r}
+#Running the model
+rf_res <- 
+  rf_workflow %>% 
+  tune_grid(cv_folds,
+            grid = 25,
+            control = control_grid(save_pred = TRUE),
+            metrics = metric_set(roc_auc))
+
+
+rf_res %>% 
+  show_best(metric = "roc_auc")
+
+#plotting the results
+autoplot(rf_res)
+```
+The results indicates that for optimal performance, two or three predictors are required at each node whereas the minimal number of data points required to keep splitting varied.  
+
+Next, I selected the best model according to the ROC AUC metric.
+```{r}
+#selecting best model
+rf_best <- 
+  rf_res %>% 
+  select_best(metric = "roc_auc")
+rf_best
+
+```
+Below codes collected the predictions required to plot the ROC curve. 
+```{r}
+rf_res %>% 
+  collect_predictions()
+```
+Next, I filtered the predictions for the best random forest model.
+
+```{r}
+#collecting predictions from the best RF model
+rf_auc <- 
+  rf_res %>% 
+  collect_predictions(parameters = rf_best) %>% 
+  roc_curve(ValuedCust, .pred_0) %>% 
+  mutate(model = "Random Forest")
+```
+
+I compared the validation set ROC curves for the top penalized logistic regression model and random forest model.
+
+```{r}
+#comparing roc curves from logistic regression and random forest models
+p7<- bind_rows(rf_auc, lr_auc_rev) %>% 
+  ggplot(aes(x = 1 - specificity, y = sensitivity, col = model)) + 
+  geom_path(lwd = 1.5, alpha = 0.8) +
+  geom_abline(lty = 3) + 
+  coord_equal() + 
+  scale_color_viridis_d(option = "plasma", end = .6)
+p7
+
+figure_file = here("results","figures","ROC(AUC)_lrvsrf.png")
+ggsave(filename = figure_file, plot=p7)
+
+
+```
+Both models seem to perform equally good across event probability threshold.
+
+In the subsequnt phase, the random forest model is evaluated on the testing data. 
+First the model is finalized using the best hyperparameters identified during the tuning process. First I updated the model specification with the best parameters and then trained the final model on the entire training dataset. 
+
+
+
+```{r}
+#Step1: Finalizing the model with best hyperparameters
+final_rf_workflow <- finalize_workflow(rf_workflow, parameters = rf_best)
+
+#Step2: Fit the model on the entire training data
+final_rf_fit <- fit(final_rf_workflow, data = final_data_train)
+
+#Step3: Predict on the test data
+rf_test_predicts <- predict(final_rf_fit, new_data = final_data_test, type = "prob")
+
+#Adding a colum for the predicted class based on the probability threshold of 0.5
+rf_test_predicts <- rf_test_predicts%>%
+  mutate(predicted_class = if_else(.pred_1>0.5, "ValuedCust", "NotValuedCust"))
+
+#Step4: Evaluate the model performance on test data
+rf_roc_auc_test <- final_data_test%>%
+  bind_cols(rf_test_predicts)%>%
+  roc_curve(truth = ValuedCust, .pred_0)%>%
+  autoplot()
+p8<-rf_roc_auc_test
+p8
+
+figure_file = here("results","figures","ROC(AUC)_rftest.png")
+ggsave(filename = figure_file, plot=p8)
+
+
+```
+
+
+
+
+
+
+
+

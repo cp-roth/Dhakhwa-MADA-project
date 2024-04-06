@@ -32,7 +32,7 @@ _Write a summary of your project._
 ## General Background Information
 _Provide enough background on your topic that others can understand the why and how of your analysis
 
-This project aims to leverage statistical modeling techniques to predict customer segmentation based on their purchasing behavior pattern, using both supervised and unsupervised learning approaches. In the initial phase, the analysis employs logistic regression to segregate customers based on the general patterns of purchasing behavior. As the study advances, it integrates Machine Learning Tools into the analysis. 
+This project aims to leverage statistical modeling techniques to predict customer segmentation based on their purchasing behavior pattern, using the Supervised and Machine Learning approaches. In the initial phase, the analysis employs logistic regression to segregate customers based on the general patterns of purchasing behavior. As the study advances, it integrates Machine Learning Tools into the analysis. 
 
 It is crucial that organizations understand their customer’s purchasing patterns to devise and implement effective, personalized engagement strategies. By analyzing behaviors such as spending habits and purchase frequency, businesses can segment their customers and tailor marketing and sales efforts to cater to the unique needs of each segment. This personalized approach can not only boost customer satisfaction but also improve multiple end results like customer loyalty, operational efficiency, and profitability.
 
@@ -81,19 +81,16 @@ The study of customer spending pattern requires the knowledge of each individual
 ### RFM Classification
 In absence of a pre-existing customer groups, the study segmented customers into two distinct groups using a recency, frequency and monetary (RFM) model. RFM model is a commonly used behavior-based model in analysing customer behavior [@yeh2009knowledge]. Recency is measured in days or months and represent the interval between the most recent transaction time and the time of analysis, and a lower number interval is preferred. Frequency is the number of purchases made in a certain period, and monetary is the total amount the customer spent during that time period.[@wei2010review]
 
-In the RFM classification process, the Recency, Frequency and Monetary values are calculated for each customer, ensuring that each customer was represented only once in the modified dataset.Frequency in this data is the total no. of Invoices issued to the customer, and Monetary is the total purchases made by the customer during the stipulated period. Recency was calculated from the next day of the transaction period. Each customer was assigned a value ranging from 1 to 4 for the Recency, Frequency and Monetary attributes, reflecting their quartile position within each metric. Subsequently, these metrics were combined to formulate a three-digit score for every custoemr, positioning the Monetary value in the hundreds place, Frequency in the tens place, and Recency in the units place. All the customers with a score above 344 were assigned as High-Value Customers.
+In the RFM classification process, the Recency, Frequency and Monetary values are calculated for each customer, ensuring that each customer was represented only once in the modified dataset.Frequency in this data is the total no. of Invoices issued to the customer, and Monetary is the total purchases made by the customer during the stipulated period. Recency was calculated from the next day of the transaction period. Each customer was assigned a value ranging from 1 to 4 for the Recency, Frequency and Monetary attributes, reflecting their quartile position within each metric. Subsequently, these metrics were combined to formulate a three-digit score for every customer, positioning the Monetary value in the hundreds place, Frequency in the tens place, and Recency in the units place. All the customers with a score above 344 were assigned as High-Value Customers.
 
 Following RFM segmentation, logistic regression is applied to predict customer group membership. This method utilized the segments derived from RFM as the dependent variable, with the Recency, Frequency and Monetary attributes serving as independent variables. The objective is to develop a model for predictive analysis based on those segments.
 
 ## Statistical analysis
 _Explain anything related to your statistical analyses._
 
-{{< pagebreak >}}
-
 # Results
 
 ## Exploratory/Descriptive analysis
-
 @tbl-resulttable1 depicts the descriptive statistics of various aspects of customers purchase behavior. There were 1402 transactions with 399 customers outside UK during the period from December 1, 2010 to	December 9, 2011. The store recorded a mean sales of GBP 436 per transaction, an average cumulative sales of GBP 1532 to individual customers and sales frequency of above 3 times per customer. 
 
 
@@ -110,40 +107,35 @@ knitr::kable(resulttable1)
 
 ```{r}
 #| label: fig-result1
-#| fig-cap: "Distribution of Sales and Purchase frequency"
+#| fig-cap: "Distribution of Valued Customers"
 #| echo: FALSE
 knitr::include_graphics(here("results", "figures", "Customer_Segment.png"))
 ```
 
 
-@fig-result2 depicts two density plots for the Cumulative Sales and Invoice Values across customers and a histogram for Customer purchase frequencies. Both density plots are heavily right-skewed.The averages of total sales to a customer and total invoice values appear to be less than 2500 and 500 sterling pounds, respectively, supporting the mean values of 1532 and 436 in the descriptive table. The average frequency appears to be less than 5 times, which is also observed in the descriptive statistics table.
+@fig-result2 depicts a correlation plot for Monetary, Frequency and Recency embedded with density plots. All of the density plots are heavily right-skewed. Monetary amount has a positive correlation of 0.787 with Frequency and a negative correlation of 0.334 with Recency. Likewise, the correlation between Recency and Frequency is negativ with a magnitude of 0.376. The correlation values indicated that collinearity is unlikely to be an issue for the analysis.
 
 ```{r}
 #| label: fig-result2
-#| fig-cap: "Distribution of Sales and Purchase frequency"
+#| fig-cap: "Correlation Plot"
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
+#knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
+knitr::include_graphics(here("results", "figures", "correlations.png"))
 ```
-@fig-result3 depicts a density plot of number of days since the last transaction made by a customer. The distribution is right-skewed. This plot indicates that most customers made a purchase transaction within the last 30 days of the reference date.It also reveals that few customers had not make a transaction for a long time.
+{{< pagebreak >}}
 
-
+@fig-result3 depicts a trend of monthly international sales. A spike is noticed in November, presumably due to Christmas in the following month, which is also supported by distribution of the Recency plot. 
 ```{r}
 #| label: fig-result3
-#| fig-cap: "Distribution of Recency of Purchase"
-#| echo: FALSE
-knitr::include_graphics(here("results", "figures", "Recency.png"))
-```
-
-@fig-result4 depicts a trend of monthly international sales. A spike is noticed in November, presumably due to Christmas in the following month, which is also supported by distribution of the Recency plot. 
-```{r}
-#| label: fig-result4
 #| fig-cap: "Monthly Sales trend"
 #| echo: FALSE
 knitr::include_graphics(here("results", "figures", "Monthly_Sales.png"))
 ```
-@fig-result5 depicts country-wise trend of international sales by sales amount. Top customers were in Germany, France, Spain and Belgium.  
+{{< pagebreak >}}
+
+@fig-result4 depicts country-wise trend of international sales by sales amount. Top customers were in Germany, France, Spain and Belgium.  
 ```{r}
-#| label: fig-result5
+#| label: fig-result4
 #| fig-cap: "Countrywise Sales trend"
 #| echo: FALSE
 knitr::include_graphics(here("results", "figures", "Countrywise_Sales.png"))
@@ -153,40 +145,82 @@ knitr::include_graphics(here("results", "figures", "Countrywise_Sales.png"))
 
 _To get some further insight into your data, if reasonable you could compute simple statistics (e.g. simple models with 1 predictor) to look for associations between your outcome(s) and each individual predictor variable. Though note that unless you pre-specified the outcome and main exposure, any "p<0.05 means statistical significance" interpretation is not valid._
 
-Penalized logistic regression of customer segment was performed on Recency, Frequency and Monetary variables using 'tidymodels' package and 4-fold corss-validation techniques. 
+First, I fitted the traditional logistic regression model to segregate the high value clients without applying the cross-validation. The results  returned a warning message that the algorithm did not converge and that the fitted probabilities numerically 0 or 1 occurred. I computed the accuracy and AUC despite this message.
 
-@fig-result6 depicts the area under ROC curve by the range of penalty values. It provides visualization of validation set metrics. The curve has extreme high values, all above 0.9995. A sharp drop is noticed before the penalty value of 0.0010, suggesting the sensitivity of the performance of the model at this penalty value. This is followed by a sharp rise after the penalty value of 0.01.  These features of model performance are indicative of the training data and the data being easily separable.
+{{< pagebreak >}}
 
+@tbl-resulttable2 depicts the accuracy of and ROC AUC metrics of the model. The model appears to have a perfect accuracy in predicting the customer segment based on the accuracy metric however it does not seem to have not even random guessing ability based on the ROC AUC metric.  
 
-```{r}
-#| label: fig-result6
-#| fig-cap: "Visualization of validation set metrics"
+```{r out.width="100%", fig.show='hold', warning=FALSE}
+#| label: tbl-resulttable2
+#| tbl-cap: "Model Metrics"
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "ROC(AUC)_Penalty.png"))
-```
-@fig-result7 depicts validation set ROC curve plotting true positive rate (sensitivity) against the false positive rate (1-specificity) at various threshold settings. The curve moves along 1-specificity and rises only from the end.This suggests that the model has no  ability to distinguish between the two customer categories. This suggests that the logistic regression model is not appropriate to the dataset. It pointed out the need to revisit the choice of model.
+resulttable2 = readRDS(here("results", "tables", "logit_combinedstats.rds"))
+knitr::kable(resulttable2)
 
-
-```{r}
-#| label: fig-result7
-#| fig-cap: "Visualization of Validation set ROC curve"
-#| echo: FALSE
-knitr::include_graphics(here("results", "figures", "ROC(AUC)_Validation.png"))
 ```
+
 
 ## Full analysis
 
 _Use one or several suitable statistical/machine learning methods to analyze your data and to produce meaningful figures, tables, etc. This might again be code that is best placed in one or several separate R scripts that need to be well documented. You want the code to produce figures and data ready for display as tables, and save those. Then you load them here._
 
-#Example @tbl-resulttable2 shows a summary of a linear model fit.
+### Penalized Logistic Regression with cross-validation
+For further analysis, I fitted a penalized logistic regression to the data using 'tidymodels' package and 10-fold cross-validation technique. The goal was to obtain the best value for predictions by tuning the model hyperparametes and using a mixture that chooses a simple model.
+
+The data has 25% of the customers grouped as Valued Customer. Due to this imbalanced proportions of the segment, the data was stratified by the outcome variable for splitting into training and testing sets to ensure that those subsets include similar proportion of Valued Customer.
+
+{{< pagebreak >}}
+
+@fig-result5 depicts the area under ROC curve by the range of penalty values. It provides visualization of validation set metrics. The curve has extreme high values, all at 1 before the penalty value of 1 followed by a sharp drop, suggesting the sensitivity of the performance of the model at the corresponding penalty value. These features of model performance are indicative of the training data being easily separable.
+
 
 ```{r}
-#| label: tbl-resulttable2
-#| tbl-cap: "Linear model fit table."
+#| label: fig-result5
+#| fig-cap: "Area under ROC curve by Penalty"
 #| echo: FALSE
-#resulttable2 = readRDS(here("results","tables","summarytable.rds"))
-#knitr::kable(resulttable2)
+knitr::include_graphics(here("results", "figures", "ROC(AUC)_Penalty.png"))
 ```
+{{< pagebreak >}}
+
+@fig-result6 depicts validation set ROC curve plotting true positive rate (sensitivity) against the false positive rate (1-specificity) at various threshold settings. The curve moves along 1-specificity and rises only from the end.This suggests that the model has no  ability to distinguish between the two customer categories. Contrarily, as in the case of traditional logistic model, the accuracy metrics of this validation set has a high value, 0.9966555.This suggested the need of digging down to the reason of these opposing model performances. The confusion matrix revealed that it almost perfectly identified both classes except for one date point. This indicated a potential inaccuracy or misinterpretation in the ROC curve plotting.  
+
+```{r}
+#| label: fig-result6
+#| fig-cap: "Visualization of Validation set ROC curve"
+#| echo: FALSE
+knitr::include_graphics(here("results", "figures", "ROC(AUC)_Validation.png"))
+```
+{{< pagebreak >}}
+
+I plotted the ROC curve for the predicted probabilities for the negative class i.e. customer category '0' representing 'Not a Valued Customer'. Using this approach, the ROC-AUC values aligned with the confusion matrix and resulted into a almost perfect curve. The model showed high sensitivity for class 0 and high specificity for class 1, with correctly identifying almost all classes. 
+### (I need to figure out if this result is valid or interpretable or what caused this. The subsequent parts are assuming this result is valid)
+
+
+```{r}
+#| label: fig-result7
+#| fig-cap: "Validation set using Penalized Logistic Regression"
+#| echo: FALSE
+knitr::include_graphics(here("results", "figures", "ROC(AUC)_Validation_rev.png"))
+```
+In the next step, I applied the model to the test data to see its performance on unseen data. The resulting ROC_AUC curve also suggested that the model performed exceptionally well on the test data in classifying the two classes, with high accuracy, sensitivity and specificity. This excellent performance might potentially due to overfitting, which occurs when a model learns the training data too closely. The data is relatively straightforward. This may have made it easier for the model to learn and predict accurately on the test data. 
+
+
+### Random Forest with cross-validation
+In the next phase, I fitted a Random Forrest model with 10-fold cross validation using a space-filling design to tune, with 25 candidate models and plotted the results of the tuning process. The results indicated that for optimal performance, two or three predictors are required at each node with a varied minimal number of data points for splitting. The model is found to perform exceptionally well with high accuracy.   
+
+{{< pagebreak >}}
+
+I compared the validation set ROC curves for the top penalized logistic regression model and random forest model. Both models are found to perform well. 
+
+```{r}
+#| label: fig-result8
+#| fig-cap: "Validation set: Penalized Logistic Regression vs Fandom Forest"
+#| echo: FALSE
+knitr::include_graphics(here("results", "figures", "ROC(AUC)_lrvsrf.png"))
+```
+
+In the subsequent phase, the random forest model is evaluated on the testing data and is found to perform equally well on the testing data. 
 
 
 {{< pagebreak >}}
