@@ -1,5 +1,5 @@
 ### Introduction
-This project aims to develop a predictive model for customer segmentation by using a retail store data 'superstoredata.csv'.
+This project aims to develop a predictive model for classifying those customers who returned during the holiday season versus those who did not return, by using a retail store data 'superstoredata.csv'.
 
 ### Acknowledgement
 I followed the recommended template for file and folder organization from Dr. Andreas Handel, utilizing R, Quarto, and GitHub.
@@ -18,13 +18,12 @@ To replicate this project, one needs to have a few programs on their computer: R
 
 ### Sequence of execution
 
-(1) Run the processing file 'processing_superstore-v1.qmd' at R\processing-code\ to clean the raw data 'superstoredata'. This step cleans the raw data and saves the cleaned data as processed_superstore_RFM.rds in data\processed-data\ which is ready for further analysis. 
+(1) Run the processing file 'processing_superstore.qmd' at R\processing-code\ to clean the raw data 'superstoredata'. This step cleans the raw data and saves the cleaned data as processed_superstore.rds in data\processed-data\ which is ready for further analysis. 
 
 (2) Run the eda_superstore.qmd at R\eda-code\ for exploratory analysis. 
 
-(3) Run the file statistical-analysis_superstoreRFM in R\analysis-code to run the model. 
+(3) Run the file statistical-analysis_all.qmd in R\analysis-code to run the model. 
 
-(4) Run Manuscript, poster and/or slides to see the final product of the project. Those files store the results and display them. These files also pull in references from the `bibtex` file and format them according to the CSL style.
+(4) Run Manuscript.qmd to see the final product of the project. This files store the results and display them. This file also pulls in references from the `bibtex` file and format them according to the CSL style.
 
 
-Following the analysis, the manuscript, poster, and slides example files can be executed in any sequence. These documents incorporate the results obtained from the analysis. Each of these documents (manuscript, poster, slides) will also extract references from the bibtex file, organizing them according to the chosen CSL style, ensuring that citations are correctly formatted.

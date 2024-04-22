@@ -1,1 +1,1 @@
-This folder contains a Quarto file which runs exploratory analysis of the processed data, processed_superstore_RFM.rds and stores figures in results/figures folder and tables in the  results/tables folder. 
+This folder contains a Quarto file which runs exploratory analysis of the processed data, processed_superstore.rds and stores figures in results/figures folder and tables in the  results/tables folder. 

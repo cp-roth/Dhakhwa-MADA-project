@@ -1,1 +1,1 @@
-This folder contains a R file which performs statistical analysis of the processed data, processed_superstore_RFM.rds. 
+This folder contains a QMD file which performs statistical analysis of the processed data, processed_superstore.rds. 

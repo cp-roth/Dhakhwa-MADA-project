@@ -4,7 +4,7 @@ author: "Malika Dhakhwa"
 date: "2024-02-23"
 output: html_document
 ---
-
+The purpose of this task is to perform exploratory analysis of the superstore data. 
 
 # Setup
 Required packages are loaded.
@@ -20,17 +20,18 @@ library(ggplot2) # for visualization
 library(tibble) # For rownames_to_column
 library(gt) # for table
 library(gridExtra)
-library(webshot2) #Capture as an Image the gttable before converting it to pdf
 library(zoo) #To plot seasonality of sales
+library(scales)
 ```
 
 Data is loaded using here function.
 
 ```{r}
 #Path to data using here() package
-data_location <- here::here("data","processed-data","processed_superstore_RFM.rds")
+
+data_location <- here::here("data","processed-data","processed_superstore.rds")
 #load data
-mydata <- readRDS(data_location)
+superstore <- readRDS(data_location)
 ```
 
 # Data exploration through tables
@@ -38,111 +39,137 @@ mydata <- readRDS(data_location)
 Creating summary table and saving it to the results folder.
 
 ```{r}
-summary_df = skimr::skim(mydata)
+summary_df = skimr::skim(superstore)
 print(summary_df)
 # save to file
 summarytable_file = here("results","tables", "summarytable.rds")
 saveRDS(summary_df, file = summarytable_file)
 ```
+The data summary reveals that there were 14951 transactions to 4117 different customers during 2010-12-01 and	2011-12-09.
 
 # Descriptive Statistics tables
+The processed data accounts sales of a particular item as an observation. This means different items sold in the same Invoice appears as separate observations and it is most likely that each Invoice number appeared in separate observations. For descriptive analysis, we need to combine the sales under one invoice as a single observation.
 
-A meaningful analysis of customer spending behavior require the Invoice Sales Amount, total purchase by a Customer during a period, frequency of purchase by a customer during a period or a combination of those. A table is created which provides the descriptive statistics of sales by Invoice value, Customer purchase and frequency of customer purchase. This table reveals that there were 1402 transactions to 399 different customers during 2010-12-01 and	2011-12-09.  
+```{r}
+#Creating data frame where Sales under a unique Invoice No. is bundled as a single observation
+store_InvNo <- superstore %>%
+  #grouping the data by the unique InvoiceNo
+  group_by(InvoiceNo) %>%
+  summarise(InvoiceValue = sum(Sales, na.rm = TRUE), #sums all the sales under the unique InvoiceNo
+            InvoiceDate = first(InvoiceDate),  #Selects the first Invoice Date for the data grouped by InvoiceNo 
+            CustomerID = first(CustomerID), #Selects the first CustomerID for the data grouped by InvoiceNo
+            Country = first(Country)) %>%   ##Selects the first Country for the data grouped by InvoiceNo
+select(InvoiceDate, InvoiceNo, CustomerID, InvoiceValue, Country)
+str(store_InvNo)
+skimr::skim(store_InvNo)
+```
+
+For further exploratory analysis, we require customer spending behavior indicators, Recency, Frequency and Monetary. Recency is the number of days since the last purchase by a customer. Frequency is the no. of purchases by a customer over a given period. Monetary is the total amount of purchase a customer has made over a period. 
+
+For determining recency of a transaction, a reference date past the study period is required. The data covers transactions till 2011-12-09. The next day i.e. 2011-12-10 is considered as the reference date to measure recency.
+
+```{r}
+#fixing the reference date for recency
+ref_date <- as.Date("2011-12-10")
+
+#Creating a data frame that includes Recency, frequency and monetary of customer purchase.
+store_CustomerID <- superstore %>%
+  group_by(CustomerID) %>%
+  summarise(Frequency = n_distinct(InvoiceNo),
+            Recency = as.numeric(ref_date - as.Date(max(InvoiceDate))),
+            Monetary=sum(Sales))%>%
+  ungroup()
+
+
+```
+A table is created which provides the descriptive statistics of sales by Invoice value, Customer purchase, frequency and recency of customer purchase.   
+
 
 ```{r}
 
 # Aggregate total sales by InvoiceNo for calculating mean, standard deviation, minimum and maximum
-Sales_by_Invoice <- mydata %>%
+Sales_by_Invoice <- store_InvNo %>%
     summarise(
-    Particulars = "Invoice Value",
     Count = n(),
-        Mean = round(mean(InvoiceValue, na.rm = TRUE), 2),
+    Particulars = "Invoice Value",
+    Mean = round(mean(InvoiceValue, na.rm = TRUE), 2),
     SD = round(sd(InvoiceValue, na.rm = TRUE), 2),
     Min = round(min(InvoiceValue, na.rm = TRUE), 2),
     Max = round(max(InvoiceValue, na.rm = TRUE), 2)
   )
 
 # Aggregate total sales by CustomerID to calculate mean, standard deviation, minimum and maximum
-TotalSales_customer <- mydata %>%
-  group_by(CustomerID) %>%
-  summarise(TotalSales = sum(InvoiceValue, na.rm = TRUE)) %>%
-  ungroup() %>%
-  summarise(
-    Particulars = "Cumulative Sales to Individual Customers",
+TotalSales_customer <-store_CustomerID%>%
+    summarise(
     Count = n(),
-    Mean = round(mean(TotalSales, na.rm = TRUE), 2),
-    SD = round(sd(TotalSales, na.rm = TRUE), 2),
-    Min = round(min(TotalSales, na.rm = TRUE), 2),
-    Max = round(max(TotalSales, na.rm = TRUE), 2)
+    Particulars = "Cumulative Purchase",
+    Mean = round(mean(Monetary, na.rm = TRUE), 2),
+    SD = round(sd(Monetary, na.rm = TRUE), 2),
+    Min = round(min(Monetary, na.rm = TRUE), 2),
+    Max = round(max(Monetary, na.rm = TRUE), 2)
   )
 
 # Frequency of sales per CustomerID (i.e., the count of unique InvoiceNo per CustomerID)for calculating mean, standard deviation, minimum and maximum
+sales_frequency_per_customer <-store_CustomerID%>%
+    summarise(
+    Count = n(),
+    Mean = round(mean(Frequency, na.rm = TRUE), 2),
+    SD = round(sd(Frequency, na.rm = TRUE), 2),
+    Min = round(min(Frequency, na.rm = TRUE), 2),
+    Max = round(max(Frequency, na.rm = TRUE), 2)
+  ) %>%
+  mutate(Particulars = "Purchase frequency")
 
-sales_frequency_per_customer <- mydata %>%
-  group_by(CustomerID) %>%
-  summarise(FrequencyOfSales = n_distinct(InvoiceNo)) %>%
-  ungroup() %>%
+#How Recent a customer bought
+Sales_Recency<- store_CustomerID%>%
   summarise(
     Count = n(),
-    Mean = round(mean(FrequencyOfSales, na.rm = TRUE), 2),
-    SD = round(sd(FrequencyOfSales, na.rm = TRUE), 2),
-    Min = round(min(FrequencyOfSales, na.rm = TRUE), 2),
-    Max = round(max(FrequencyOfSales, na.rm = TRUE), 2)
-  ) %>%
-  mutate(Particulars = "Sales frequency to Individual Customers")
-
-
+    Particulars = "Recency of Purchase",
+    Mean = round(mean(Recency, na.rm = TRUE), 2),
+    SD = round(sd(Recency, na.rm = TRUE), 2),
+    Min = round(min(Recency, na.rm = TRUE), 2),
+    Max = round(max(Recency, na.rm = TRUE), 2)
+  )
 # Combine the statistics into a single data frame
-combined_stats <- bind_rows(Sales_by_Invoice, TotalSales_customer, sales_frequency_per_customer)
+combined_stats <- bind_rows(Sales_by_Invoice, TotalSales_customer, sales_frequency_per_customer, Sales_Recency) 
 
 combined_stats
-
-#Saving this statistics in the results folder.
 
 summary_combined = here("results","tables", "combined_stats.rds")
 saveRDS(combined_stats, file = summary_combined)
 
+
 ```
+
 
 # Data exploration through figures
 
-Next, density plots were created for Sales across customers and Invoice Values. Both figures are heavily right-skewed.The averages of total sales to a customer and total invoice values appear to be less than 2500 and 1250 sterling pounds respectively supporting the mean values of 2025 and 563 in the descriptive table.
-
-A histogram of purchase frequency of each customer is created by grouping each customer by invoice no.The average frequency appears to be less than 5 times for most of the customers which is also observed in the descriptive statistics table.
+Next, histograms were created for Sales across customers and Invoice Values. Histograms were also created for purchase frequency and recency of customers.
 
 ```{r}
-# Aggregate sales by CustomerID
-TotalSales_customer <- mydata %>%
-  group_by(CustomerID) %>%
-  summarise(TotalSales = sum(InvoiceValue, na.rm = TRUE)) %>%
-  arrange(desc(TotalSales))
-
-#Density Plot of Sales per Customer
-# Assuming sales_per_customer is already calculated
-p1 <- ggplot(TotalSales_customer, aes(x = TotalSales)) +
-  geom_density(fill = "skyblue", alpha = 0.5) +
-  labs(title = "Density Plot of Sales across Customers", x = "Total Sales", y = "Density")
+#Histogram of Total Sales per Customer
+p1 <- ggplot(store_CustomerID, aes(x = Monetary)) +
+  geom_histogram(binwidth = 100,fill = "green", color = "skyblue") +
+  labs(title = "Histogram of Customer's Total Purchases", x = "Total Sales", y = "Count")
 
 # Histogram of Sales by Invoice values
-
-p2 <- ggplot(mydata, aes(x = InvoiceValue)) +
-  geom_density(fill = "lightgreen", alpha = 0.5) +
-  labs(title = "Density Plot of  Invoice Sales",
-       x = "Invoice Value", 
-       y = "Density") +
+p2 <- ggplot(store_InvNo, aes(x = InvoiceValue)) +
+  geom_histogram(binwidth = 20, fill = "lightgreen", color = "darkblue") +
+  labs(title = "Histogram of  Invoice Value", x = "Invoice Value", y = "Count") +
   theme_minimal()
 
-# Calculate purchase frequency per customer
-purchase_frequency <- mydata %>%
-  distinct(CustomerID, InvoiceNo) %>% # Ensure unique InvoiceNo per CustomerID
-  count(CustomerID, name = "PurchaseFrequency") # Count the number of invoices per customer
-library(ggplot2)
-
 # Histogram of purchase frequencies
-p3 <- ggplot(purchase_frequency, aes(x = PurchaseFrequency)) +
+p3 <- ggplot(store_CustomerID, aes(x = Frequency)) +
   geom_histogram(binwidth = 1, fill = "salmon", color = "darkblue") + # Adjust binwidth as needed
   labs(title = "Histogram of Customer Purchase Frequencies",
        x = "No. of Purchases", 
+       y = "Count of Customers") +
+  theme_minimal()
+# Histogram of purchase recencies
+p4 <- ggplot(store_CustomerID, aes(x = Recency)) +
+  geom_histogram(binwidth = 10, fill = "coral", color = "darkblue") + # Adjust binwidth as needed
+  labs(title = "Histogram of Customer Purchase Recency",
+       x = "Days since last Purchase", 
        y = "Count of Customers") +
   theme_minimal()
 
@@ -152,84 +179,120 @@ p1 <- p1 + theme(plot.title = element_text(size = 11)) # Adjusting font size of 
 p2 <- p2 + theme(plot.title = element_text(size = 11)) # Adjusting font size of the title of p2
 # Modify p3 to adjust title font size
 p3 <- p3 + theme(plot.title = element_text(size = 11)) # Adjusting font size of the title of p3
+# Modify p4 to adjust title font size
+p4 <- p4 + theme(plot.title = element_text(size = 11)) # Adjusting font size of the title of p3
 
-plot1<-grid.arrange(p1, p2, p3, ncol = 2, nrow=2)
+plot1<-grid.arrange(p1, p2, p3,p4, ncol = 2, nrow=2)
 
 figure_file = here("results","figures","Sales_distribution.png")
 ggsave(filename = figure_file, plot=plot1) 
 
 ```
-
-
-Next, total purchase by a customer was plotted against purchase frequency.A few outliers were noted. 
+All histograms exhibited heavily right-skewness. The histogram of Customer's Total Purchases indicated majority of the customers are associated with lower sales amount, typical of individual consumer transactions. Histogram of Invoice value aligns with this finding by showing that most invoices had values consistent with retail purchases. Histogram of Customer Purchase Frequencies indicated that most customers engage in a number of transactions typical for retail shopping behavior. Histogram of Customer Purchase Recency exhibited a higher frequency of recent purchases, which suggest regular shopping habits expected in retail context. ed. 
 
 ```{r}
 #| message: false
 #| warning: false
-# Calculate purchase frequency and total invoice value per customer
-customer_stats <- mydata %>%
-  group_by(CustomerID) %>%
-  summarise(PurchaseFrequency = n_distinct(InvoiceNo),
-            TotalInvoiceValue = sum(InvoiceValue, na.rm = TRUE)) %>%
-  ungroup()  # Ensure the data is ungrouped for further analysis
 
 # Scatter plot of Total Invoice Value by Purchase Frequency
-p4 <- ggplot(customer_stats, aes(x = PurchaseFrequency, y = TotalInvoiceValue)) +
-  geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
+p5 <- ggplot(store_CustomerID, aes(x = Frequency, y = Monetary)) +
+  geom_point(alpha = 0.5) +  
   geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
   labs(title = "Total Invoice Value by Purchase Frequency",
        x = "Purchase Frequency",
-       y = "Total Invoice Value") +
+       y = "Cummulative Invoice Value") +
   theme_minimal()
-plot(p4)
+p5
 
-
-figure_file = here("results","figures","Sales_trend.png")
-ggsave(filename = figure_file, plot=p4)
-
-
+figure_file = here("results","figures","MonetarybyFreq_distribution.png")
+ggsave(filename = figure_file, plot=p5) 
 
 ```
+The scatter plot visualizing Total Invoice Value by Purchase Frequency indicates a positive correlation between the two components. This suggests that as the frequency of purchases by a customer increases, so does their total amount spent. Such a finding is typical in retail scenarios where regular customers often contribute more to overall sales than infrequent ones. This trend underscores the importance of strategies aimed at increasing customer engagement and purchase frequency as a means to boost revenue.
 
-Next, Bar chart is created for Sales Distribution by Country. The top five sales are in Germany, France, Spain, Switzerland and Japan. 
-
-```{r}
-p5 <- mydata %>% 
-  group_by(Country) %>% 
-  summarise(TotalSales = sum(InvoiceValue)) %>%
-  ggplot(aes(x = reorder(Country, TotalSales), y = TotalSales, fill = Country)) + 
-  geom_bar(stat = "identity") + 
-  coord_flip() + 
-  theme(legend.position = "none")
-
-plot(p5)
-
-figure_file = here("results","figures","Countrywise_Sales.png")
-ggsave(filename = figure_file, plot=p5)
-```
-As the store sells gift goods, an inspection is required to check the seasonality of sales. First, monthly total sales is calculated aggregating Invoice Value by months of the Invoice Date.The aggregated sales is then plotted to visualize seasonal trend which depicted a spike in the sales during the last few months of the year.
+As the store is in gift selling business, an inspection is required to check the seasonality of sales. First, monthly total sales is calculated aggregating Invoice Value by months of the Invoice Date.The aggregated sales is then plotted to visualize seasonal trend.
 
 ```{r}
 #Aggregating Sales by months
-mydata_aggregated <- mydata %>%
+superstore_aggregated <- store_InvNo %>%
   group_by(InvoiceDate = as.yearmon(InvoiceDate)) %>%
   summarize(TotalValue = sum(InvoiceValue))
 
 # Formatting Date for plotting purposes
-mydata_aggregated$InvoiceDate <- as.Date(as.yearmon(mydata_aggregated$InvoiceDate))
+superstore_aggregated$InvoiceDate <- as.Date(as.yearmon(superstore_aggregated$InvoiceDate))
 
-p6<-ggplot(mydata_aggregated, aes(x = InvoiceDate, y = TotalValue)) +
+p6<-ggplot(superstore_aggregated, aes(x = InvoiceDate, y = TotalValue)) +
   geom_line() + 
-  scale_x_date(date_labels = "%b", date_breaks = "1 month") + # Adjust formatting as needed
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") + 
+  scale_y_continuous(labels = label_number()) + # formats the y-axis labels as full numbers
   labs(title = "Monthly Sales", x = "Month", y = "Sales Value") +
   theme_minimal()
+
+
 p6
 
 figure_file = here("results","figures","Monthly_Sales.png")
 ggsave(filename = figure_file, plot=p6)
 
 ```
+The data spans from 2010-12-01 and	2011-12-09, revealing a good growth in the December of 2011 compared to the same month previous year. The monthly sales exhibits noteworthy seasonal variation. A sharp peak in May suggests a strong spring season and the plateau from June to August indicates stability in consumer purchases. Starting in October, the sales trajectory showed an upward trend, reaching maximum in November/December, which could be due to early holiday shopping influenced by Black Friday and the approaching Christmas season. It is reasonable to anticipate that past customers will engage in purchasing activities during these peak sales periods.
+
+To gain further insights, an examination of the recency by frequency plot is carried out. This will help to understand the relationship between the recency of purchases and the frequency of customer transactions.
+
+```{r}
+# Scatter plot of Recency by Frequency
+p7 <- ggplot(store_CustomerID, aes(x = Frequency, y = Recency)) +
+  geom_point(alpha = 0.5) +  
+  labs(title = "Recency by Frequency Plot",
+       x = "Purchase Frequency",
+       y = "No. of days since Last Purchase") +
+  theme_minimal()
+p7
+
+figure_file = here("results","figures","Recency_by_Frequency.png")
+ggsave(filename = figure_file, plot=p7)
+```
+While the Recency by Frequency plot revealed an expected pattern where customers with more frequent purchases tended to have more recent transactions, an unexpected trend was also noted. There are some evidences that a segment of customers with a history of multiple purchases did not return during the peak sales period. This divergence from the usual retail pattern suggests the need of further investigation.
+
+To complement this analysis, another chart is created to examine whether there is a correlation between the recency of purchases and the monetary value of those purchases. 
+
+```{r}
+# Scatter plot of Recency by Frequency
+p8 <- ggplot(store_CustomerID, aes(x = Monetary, y = Recency)) +
+  geom_point(alpha = 0.5) +  
+  labs(title = "Recency by Monetary plot",
+       x = "Monetary",
+       y = "No. of days since Last Purchase") +
+  theme_minimal()
+p8
+
+figure_file = here("results","figures","Recency_by_Monetary.png")
+ggsave(filename = figure_file, plot=p8)
+```
+The Recency by Monetary plot mirrored the trend observed in the 'Recency by Frequency' plot. The plot revealed that a subset of customers who have purchased over 10,000 in monetary value, did not make subsequent purchases within the following 100 days. 
+
+The store has customer base inside and outside of the UK. To visualize the sales distribution by countries, a bar chart is plotted. 
 
 
+```{r}
+p9 <- store_InvNo %>% 
+  group_by(Country) %>% 
+  summarise(TotalSales = sum(InvoiceValue)) %>%
+  ggplot(aes(x = reorder(Country, TotalSales), y = TotalSales, fill = Country)) + 
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = label_number())+
+  coord_flip() + 
+  theme(legend.position = "none")
+
+plot(p9)
+
+figure_file = here("results","figures","Countrywise_Sales.png")
+ggsave(filename = figure_file, plot=p9)
+```
+As exhibited, majority of the sales is in UK followed by Germany and France. 
+
+To better understand the customer base and identify the most loyal shoppers, the project will focus on customers who have shopped with the store in two distinct periods: the first half of the year and the peak sales season. As revealed by the monthly sales trend, sales during first six months of the store were comparatively slower than the later period of the year. The first half of the year also typically doesn't have big festive drives to attract the buyers. Customers who made purchases during this time might be doing so based on the everyday value and appeal of the products, free from the influence of holiday discount or promotions. During the peak sales season, the shopping activity naturally increases due to holidays surging the store's sales. On the other hand, competition among retailers intensifies, with promotions proliferating across the market and challenging the customer retention. Amidst this competition, customers who chose to return to the same store for their holiday purchases potentially are the ones who shop with the store regularly, regardless of festive season or deal offers. By looking at customers who have made purchases in both of these times, a group that is valuable round the year can be identified. Such group potentially keep steady sales in the slower months and boost the numbers during the busy times. Understanding this group can help focus the marketing efforts, improve the customer service, and ultimately, keep the business strong.
+
+The analysis part of the project is designed to quantify the contributions made by this segment of customers to the store's overall business. Such data-driven understanding is anticipated to help marketing initiatives and customer service enhancements in order to retain loyal customer base.The analysis can be found at R>analysis-code-statistical_analysis.qmd
 
 

@@ -1,0 +1,340 @@
+---
+title: "Cleaning data 'Superstore'"
+author: "Malika Dhakhwa"
+date: "2024-02-23"
+output: html_document
+---
+
+The purpose of this project is to analyze the impact of customer loyalty on business of a non-store online retail by examining the contribution in revenue by customers who returned to purchase during the holiday season. It uses a transnational data set 'superstoredata' spanning from December 1, 2010, to December 9, 2011 from a UK-based, non-store online retail operation. The company specializes in unique all-occasion gifts to a clientele which also includes large wholesalers.This study exclude larger sales which are indicative of sales to larger wholesales, from the analysis to avoid potential bias. 
+
+The raw data accounts sales of a particular item as an observation. This means different items sold in the same Invoice appears as separate observations and it is most likely that each Invoice number appeared in separate observations. 
+
+# Setup
+
+Install and load needed packages. 
+
+```{r}
+#| message: false
+#| warning: false
+library(readxl) #for loading Excel files
+library(dplyr) #for data processing/cleaning
+library(tidyr) #for data processing/cleaning
+library(skimr) #for nice visualization of data 
+library(here) #to set paths
+library(ggplot2) # for visualization
+library(scales) # for labels
+```
+
+
+# Data loading
+Loading data using here function.
+
+
+```{r}
+# path to data
+# note the use of the here() package and not absolute paths
+data_location <- here::here("data","raw-data","superstoredata.csv")
+raw_data <- read.csv(data_location)
+```
+
+
+# Check data
+
+Checking data
+
+```{r}
+#Checking data summaries
+dplyr::glimpse(raw_data)
+skimr::skim(raw_data)
+
+```
+# Cleaning
+The data set has 541909 observations with 9 variables.Based on the unique Invoice No., and Description of sales, the store made 25900 transactions of 4224 types of merchandise to its clients in 38 countries during the period. 
+
+The data inspection showed missing values in CustomerID, issues with signs and distribution of Quantity and Sales and format of date. It also pointed out that InvoiceNo, StockCode, Description and Country are coded as character variables in the data which need to be changed to factors for better data manipulation.
+
+First, there are 135080 missing values in CustomerID. Customer behavior is a crucial part of this analysis which cannot be tracked without the unique customerID. The observations without CustomerID do not help in doing meaningful analysis and are dropped. Further, CustomerID is coded as a numerical variable in the original data and it needs to be converted to factor variable. InvoiceNo, Country, Description and StockCode are also converted to factors from character variables and InvoiceDate converted to Date format.
+
+```{r}
+# Subset the data by excluding rows where CustomerID is NA
+  clean_data_step1 <- raw_data %>%
+  filter(!is.na(CustomerID)) %>%   #excludes observation without CustomerID
+  mutate(InvoiceNo = as.factor(InvoiceNo),  #converts InvoiceNo to a factor
+         CustomerID = as.factor(CustomerID), #converts CustomerID to a factor
+         Country = as.factor(Country), #converts Country to a factor
+         Description = as.factor(Description), #converts Description to a factor
+         StockCode = as.factor(StockCode),  #converts StockCode to a factor
+        InvoiceDate = as.POSIXct(InvoiceDate, format = "%m/%d/%Y") ) #converts to date format from character
+
+# Checking the cleaned data
+skimr::skim(clean_data_step1)
+
+```
+
+There are negative values in quantity and sales due to order cancellation. An inspection is carried out to check the number of such observations in the data set. It is found that there are 8905 observations with negative Quantity and Sales.
+
+```{r}
+#Filter observations where Quantity and Sales are negative
+negative_sales <- clean_data_step1 %>%
+  filter (Quantity < 0 & Sales < 0)
+# Count the negative sales
+count(negative_sales)
+```
+Observations with negative Quantity and Sales are dropped. This brought down the total number of observations to 397884 for total transactions of 18532 of 3877 products with 4338 different customers.    
+
+```{r}
+#Creating a new dataset that includes only Quantity and Sales with positive values
+clean_data_step2 <- clean_data_step1 %>%
+  filter(Quantity > 0, Sales > 0)
+skimr::skim(clean_data_step2)
+```
+The summary above indicated that higher values of Quantity, Unit price and sales are concentrated in the 75-100 percentile range. We need to look deeper into these variables at the higher percentiles.
+
+```{r}
+# Decomposing further the Unit Price at 75-100 percentiles 
+percentiles <- quantile(clean_data_step2$UnitPrice, probs = c(0.75, 0.90, 0.95, 0.99, 0.995, 0.996, 0.997, 0.998, 0.999, 1))
+print(percentiles)
+```
+
+The results indicate that there are only limited items that are above the unit price of 25. Observations wherein UnitPrice is above 25 are filtered for further examination. It resulted into 908 observations.
+
+```{r}
+# Filter rows where UnitPrice is greater than 25
+
+UnitPrice_above25 <- clean_data_step2[clean_data_step2$UnitPrice > 25, ]
+
+str(UnitPrice_above25)
+```
+
+The components of description was checked using the unique function which resulted into 3896 levels for 908 observations. With the help of ChatGPT, it was found that in R, when a subset of a data frame is created, the factor levels in the subset are not automatically dropped even if they are not present in the subset. To resolve this, the unused levels required to be dropped using the droplevels() function.
+
+```{r}
+#Attempt to find unique categories of stocks with unit price above 25 without dropping the unused factor levels
+unique_categories_initial <- unique(UnitPrice_above25$Description)
+print(unique_categories_initial)
+
+# Dropping unused factor levels in the Description column
+UnitPrice_above25$Description <- droplevels(UnitPrice_above25$Description)
+
+# Finding again the unique categories of stocks with unit price above 25 without dropping the unused factor levels
+unique_categories_final <- unique(UnitPrice_above25$Description)
+print(unique_categories_final)
+```
+
+The above code resulted into 36 categories in product description which have the Unitprice above 25. Some of the high UnitPrice are related to the descriptions such as CARRIAGE, POSTAGE, Manual, DOTCOM POSTAGE, Next Day Carriage, each appearing to be related to logistics. 1673 observations with such descriptions were dropped from the data since those are less likely to be directly related to customer purchase. The no. of observations came down to 396211.
+
+```{r}
+# Remove observations with specified descriptions
+clean_data_step3 <- clean_data_step2[!grepl("Manual", clean_data_step2$Description) &
+                                !grepl("POSTAGE", clean_data_step2$Description) &
+                                !grepl("CARRIAGE", clean_data_step2$Description) &
+                                !grepl("DOTCOM POSTAGE", clean_data_step2$Description) &
+                                !grepl("Next Day Carriage", clean_data_step2$Description)  , ]
+
+# Inspect the cleaned data
+skimr::skim(clean_data_step3)
+
+```
+The store also sells merchandises in large quantities to wholesalers. The lack of explicit indicators distinguishing sales to wholesalers prompted an analysis based on purchase frequency and total invoice value. A wholesaler potentially purchases in big volumes and in higher frequencies. In absence of clear information to identify wholesalers, a scatter plot of Total Invoice Value by Purchase Frequency could provide helpful information to identify potential wholesalers. 
+
+```{r}
+# Calculate purchase frequency and total invoice value per customer
+customer_stats <- clean_data_step3 %>%
+  group_by(CustomerID) %>%  
+  summarise(PurchaseFrequency = n_distinct(InvoiceNo),
+            TotalInvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+  ungroup()  # Data ungrouped for further analysis
+
+# Scatter plot of Total Invoice Value by Purchase Frequency
+p1 <- ggplot(customer_stats, aes(x = PurchaseFrequency, y = TotalInvoiceValue)) +
+  geom_point(alpha = 0.5) +  # Alpha can be adjusted as needed for point transparency
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Adding a linear regression line without standard error
+  labs(title = "Total Invoice Value by Purchase Frequency",
+       x = "Purchase Frequency",
+       y = "Total Purchase") +
+  scale_y_continuous(labels = label_comma()) +  # This line changes the y-axis labels from exp. number to actual value
+  
+    theme_minimal()
+plot(p1)
+
+
+figure_file = here("results","figures","InvoiceValue_by_frequency.png")
+ggsave(filename = figure_file, plot=p1)
+
+skimr::skim(customer_stats)
+
+```
+
+The scatter plot reveals that most of the customers made purchases less than 50 times during that period and most of the cumulative purchase values were less than 25,000. Assuming that the outliers represent purchases by wholesalers, observations with purchase frequencies above 50 and cumulative Invoice value above 25,000 are dropped from the data.
+
+This involves first sub-setting customer_stats such that it includes only those observations where PurchaseFrequency <= 50 and TotalInvoiceValue <=25000 and finally, merging this sub-set with the original dataset (clean_data_step3).
+
+```{r}
+
+# Filtering the customer_stats to meet the conditions
+filtered_customer_stats <- customer_stats %>%
+  filter(PurchaseFrequency <= 50, TotalInvoiceValue <= 25000)
+
+# Excluding purchase frequencies above 50 and cumulative invoice values above 25000 from the data
+clean_data_step4 <- clean_data_step3 %>%
+  semi_join(filtered_customer_stats, by='CustomerID')
+
+skimr::skim(clean_data_step4)
+```
+
+This step excluded 45216 observations from the data for a final total observation of 350995. A similar scatter plot is plotted for the new data.
+
+```{r}
+# Calculate purchase frequency and total invoice value per customer
+customer_stats4 <- clean_data_step4 %>%
+  group_by(CustomerID) %>%
+  summarise(PurchaseFrequency = n_distinct(InvoiceNo),
+            TotalInvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+  ungroup()  # Ensure the data is ungrouped for further analysis
+
+# Scatter plot of Total Invoice Value by Purchase Frequency
+p2 <- ggplot(customer_stats4, aes(x = PurchaseFrequency, y = TotalInvoiceValue)) +
+  geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
+  labs(title = "Total Invoice Value by Purchase Frequency",
+       x = "Purchase Frequency",
+       y = "Total Invoice Value") +
+  scale_y_continuous(labels = label_comma()) +  # This line changes the y-axis labels
+  
+    theme_minimal()
+plot(p2)
+
+```
+
+The distribution of the data appears relatively homogeneous. 
+
+The wholesalers are expected to purchase in large quantity. Additional inspection is carried out to identify wholesalers by quantity purchased and individual Invoice Amount by plotting a scatter plot. 
+
+```{r}
+# Calculate purchase quantity and value per transaction represented by InvoiceNo 
+customer_stats5 <- clean_data_step4 %>%
+  group_by(InvoiceNo) %>%
+  summarise(InvoiceQty = sum(Quantity, na.rm = TRUE),
+            InvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+  ungroup()  # Ensure the data is ungrouped for further analysis
+
+# Scatter plot of Total Quantity purchased by Invoice Amount
+p3 <- ggplot(customer_stats5, aes(x = InvoiceValue, y = InvoiceQty)) +
+  geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
+  labs(title = "Total Invoice Value by Quantity Purchased",
+       x = "Invoice Amount",
+       y = "Quantity Purchased") +
+  scale_y_continuous(labels = label_comma()) +  # This line changes the y-axis labels
+  
+    theme_minimal()
+plot(p3)
+skimr::skim(customer_stats5)
+
+```
+The scatter plot reveals that most of the customers made purchases less than 1000 items and most of the invoice values were less than 2,500. Assuming that the sparsely distributed points represent purchases by wholesalers, observations with Quantity above 1000 and individual Invoice value above 2,500 are removed from the data.
+
+This involves first sub-setting customer_stats5 such that it includes only those observations where InvoiceQty <= 1000 and InvoiceValue <=2500 and finally, merging this sub-set with the original dataset (clean_data_step4).
+
+```{r}
+# Filtering the customer_stats5 to meet the conditions
+filtered_customer_stats5 <- customer_stats5 %>%
+  filter(InvoiceQty <= 1000, InvoiceValue <= 2500)
+
+# Excluding purchase quantities above 1000 and individual invoice values above 2500 from the data
+clean_data_step5 <- clean_data_step4 %>%
+  semi_join(filtered_customer_stats5, by='InvoiceNo')
+
+skimr::skim(clean_data_step5)
+```
+This step excluded 12897 observations from the data for a final total observation of 338175. A similar scatter plot is plotted for the new data.
+
+```{r}
+# Calculate purchase quantity and amount per invoice
+customer_stats6 <- clean_data_step5 %>%
+  group_by(InvoiceNo) %>%
+  summarise(InvoiceQty = sum(Quantity, na.rm = TRUE),
+            InvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+  ungroup()  # Ensure the data is ungrouped for further analysis
+
+# Scatter plot of Purchase Quantity by Invoice Value
+p4 <- ggplot(customer_stats6, aes(x = InvoiceValue, y = InvoiceQty)) +
+  geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
+  labs(title = "Purchase Quantity by Invoice Value",
+       x = "Invoice Amount",
+       y = "Quantity Purchased") +
+  scale_y_continuous(labels = label_comma()) +  # This line changes the y-axis labels
+  
+    theme_minimal()
+plot(p4)
+
+```
+
+
+```{r}
+
+```
+
+The scatter plot of the new data further pointed out that the distribution is densed below quantity of 500 and amount of 1000.I cleaned the data further in an additional attempt to remove purchases that are likely to be from wholesalers. 
+
+
+```{r}
+# Filtering the customer_stats5 to meet the conditions
+filtered_customer_stats5 <- customer_stats5 %>%
+  filter(InvoiceQty <= 500, InvoiceValue <= 1000)
+
+# Excluding purchase quantities above 500 and individual invoice values above 1000 from the data
+clean_data_step5 <- clean_data_step4 %>%
+  semi_join(filtered_customer_stats5, by='InvoiceNo')
+
+skimr::skim(clean_data_step5)
+```
+This step excluded  observations from the data for a final total observation of 289132. A similar scatter plot is plotted for the new data.
+
+```{r}
+# Calculate purchase quantity and amount per invoice
+customer_stats6 <- clean_data_step5 %>%
+  group_by(InvoiceNo) %>%
+  summarise(InvoiceQty = sum(Quantity, na.rm = TRUE),
+            InvoiceValue = sum(Sales, na.rm = TRUE)) %>%
+  ungroup()  # Ensure the data is ungrouped for further analysis
+
+# Scatter plot of Purchase Quantity by Invoice Value
+p4 <- ggplot(customer_stats6, aes(x = InvoiceValue, y = InvoiceQty)) +
+  geom_point(alpha = 0.5) +  # Adjust alpha for point transparency, if needed
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without standard error
+  labs(title = "Purchase Quantity by Invoice Value",
+       x = "Invoice Amount",
+       y = "Quantity Purchased") +
+  scale_y_continuous(labels = label_comma()) +  # This line changes the y-axis labels
+  
+    theme_minimal()
+plot(p4)
+
+```
+This distribution looks more smooth now. If there are many wholesalers buying in relatively smaller quantities, they potentially still be in the data.
+
+Assigning a final name to the subset to make it more relevant to the actual data.
+
+```{r}
+processed_superstore <- clean_data_step5
+str(processed_superstore)
+skimr::skim(processed_superstore)
+```
+Finally, the cleaned data has 289065 observations of products purchased by 4117 customers residing in 33 different countries in 14951 transactions. There were a total of 3785 types of products purchased by the customers in this final data. 
+
+
+
+# Save data 
+
+Finally, the cleaned data is saved as RDS file. As learnt in the class, saving the cleaned data as RDS or RDA/Rdata files, preserves coding like factors, characters, numeric, etc.  Saving as CSV, that information would get lost. However, CSV is better for sharing with others since it's plain text. 
+
+```{r}
+save_data_location <- here::here("data","processed-data","processed_superstore.rds")
+saveRDS(processed_superstore, file = save_data_location)
+
+```
+
+
+

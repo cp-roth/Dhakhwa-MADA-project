@@ -1,1 +1,1 @@
-This folder contains QMD script which loads the raw data superstoredata.csv from the raw-data subfolder of the data folder, cleans it and stores it as processed_superstore_RFM.rds in the processed-data folder of the data folder.
+This folder contains QMD script which loads the raw data superstoredata.csv from the raw-data subfolder of the data folder, cleans it and stores it as processed_superstore.rds in the processed-data folder of the data folder.

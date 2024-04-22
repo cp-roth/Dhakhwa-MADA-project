@@ -1,5 +1,5 @@
 ---
-title: "Customer Segmentation"
+title: "The Value of Loyalty: Customer impact on Online Store Revenue"
 subtitle: ""
 author: Malika Dhakhwa
 date: "`r Sys.Date()`"
@@ -14,6 +14,9 @@ csl: ../../assets/apa.csl
 
 
 ```{r, echo=FALSE, message=FALSE}
+#| warning: false
+#| message: false
+
 # load a few R packages
 library(here)
 library(knitr)
@@ -21,77 +24,75 @@ library(knitr)
 
 
 # Summary/Abstract
-_Write a summary of your project._
+This project investigates the revenue implications of customer return behaviors during the holiday season for a UK-based online retailer specializing in unique gifts. In the current landscape, where e-commerce has reshaped retail, understanding customer loyalty becomes crucial for revenue growth. Utilizing a dataset of transactions spanning from December 2010 to December 2011, this study evaluates the revenue contributions of returning customers versus those who do not return.
 
+The analysis employs Linear, LASSO, and Generalized Additive Models (GAM) to explore the relationship between the sales revenue of the retailer and customer loyalty defined by returns of the customer during holiday season. The models are assessed using the root mean square error (RMSE) metric, with cross-validation reinforcing the analysis. LASSO emerged as the most effective model. The study also addresses the challenges of forecasting customer purchasing patterns using a dataset with limited information. 
 
-{{< pagebreak >}}
-
+For more comprehensive understanding of customer behavior, future studies should consider including product-specific information in the analysis and explore the feasibility of accessing demographic information about the customers. 
 
 # Introduction 
+This project examines the revenue dynamics associated with customer returns during the crucial holiday season for a UK-based non-store online retailer specializing in unique all-occasion gifts. Given the transformation of the retail sector driven by online shopping[@khouloud2020we], which saw global e-commerce sales surpass 5.78 trillion U.S. dollars in 2023 and anticipated to hit 6.3 trillion in 2024[@statista_online_shopping], understanding customer behaviors becomes imperative for retailers[@chow1997toward;@heskett1994putting]. The intersection of advancing IT, increased internet accessibility, and evolving consumer expectations necessitates strategies to foster customer loyalty[@reichheld2000loyalty] as a means to mitigate turnover costs and bolster revenue.
 
-## General Background Information
-_Provide enough background on your topic that others can understand the why and how of your analysis
+However, the presumed correlation between loyalty and profitability is not always straightforward[@Reinartz2002The; @thomas2004getting].While loyal customers are generally seen as valuable due to their repeat business, not every instance of loyalty may translate to noticeable revenue when considering factors like customer service costs and the nature of purchases.Identifying which segment of customers are truly beneficial is crucial for efficient distribution of resources [@Reinartz2002The]. This project scrutinizes the revenue contributions from customers who returned for holiday shopping compared to those who did not, with the anticipation of reinforcing the notion that loyal customers are inherently good source of revenue generation. The findings aim to offer actionable insights for the retailer to enhance revenue growth strategically.
 
-This project aims to leverage statistical modeling techniques to predict customer segmentation based on their purchasing behavior pattern, using the Supervised and Machine Learning approaches. In the initial phase, the analysis employs logistic regression to segregate customers based on the general patterns of purchasing behavior. As the study advances, it integrates Machine Learning Tools into the analysis. 
+## Background
+Building upon the impact of online shopping on consumer behavior and the importance of customer loyalty, we now turn to the subject of study. The unit is a non-store online retail business based on the United Kingdom. It specializes in unique all-occasion gifts and deals with more than three thousand types of merchandises. Its clientele base expands from retail customers to wholesales customers across United Kingdom and other geographical locations. 
 
-It is crucial that organizations understand their customer’s purchasing patterns to devise and implement effective, personalized engagement strategies. By analyzing behaviors such as spending habits and purchase frequency, businesses can segment their customers and tailor marketing and sales efforts to cater to the unique needs of each segment. This personalized approach can not only boost customer satisfaction but also improve multiple end results like customer loyalty, operational efficiency, and profitability.
+We have one year of sales data of the unit spanning from December of 2010 to December of 2011. The data reveals a pattern of sales performance with initial months showing steady yet modest results and gaining noticeable momentum as the holiday season approaches. This uptick suggests that the latter part of the year, with its festive attractions, plays a pivotal role in the overall sales activity.
 
-Given the absence of pre-categorized customer groups in the original data, a grouping variable is engineered based on purchase amount and frequency to facilitate the statistical analysis. 
+Purchases made outside of major festive events suggests a customer base attracted by the inherent appeal and variety of the product offerings, as opposed to seasonal promotions. In contrast, the peak season not only intensifies competition bringing plethora of special offers but also serves as a test for customer loyalty. It is during this time that returning customers, who are seemingly less swayed by market-wide offers, affirm their status as the cornerstone of the store's revenue, demonstrating loyalty that extends beyond the allure of holiday discounts. These insights into customer buying patterns are instrumental as we explore the operational subtleties of sales trends and their implications for sustained revenue growth.
 
-## Description of data and data source
-_Describe what the data is, what it contains, where it is from, etc. Eventually this might be part of a methods section._
+## Hypothesis
 
-This study utilizes the 'superstoredata' dataset which is a transactional dataset of a UK-based, non-store online retail operation spanning from December 1, 2010, to December 9, 2011. The store specializes in unique all-occasion gifts to a clientele which includes UK and non-UK based retail and wholesale customers. This study focuses on international sales of the store. 
-The dataset features nine variables, detailing transaction numbers, product codes, product description, quantities sold, transaction dates, unit prices, customer IDs, country of residence of the customer, and sales amounts.
-Initially this data was downloaded from Kaggle for a preliminary assessment of its usability for this project. However, when revisiting the site for further details, it was no longer available on Kaggle.com. A subsequent Google search led to the discovery of the dataset in the [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Online+Retail). 
-
-
-## Questions/Hypotheses to be addressed
-_State the research questions you plan to answer with this analysis._
-
-What statistical modeling techniques are most effective in replicating and predicting customer segmentation,based on their purchase behavior pattern, as indicated by purchase amount, purchase frequency and purchase recency?
+This project is centered around understanding the implication of customer loyalty on revenue generation at a UK-based online retailer specializing in unique gift items. Focusing on a one-year observational period, this study aims to investigate the revenue associated with customer return during the critical holiday season. Our guiding hypothesis is that customers who returned to purchase during this peak shopping period had a disproportionate and positive contribution on the retailer's revenue streams in comparison to customers who did not make return visits within the same season.
 
 # Methods 
 
-_Describe your methods. That should describe the data, the cleaning processes, and the analysis approaches. You might want to provide a shorter description here and all the details in the supplement._
+## Data and Source
+The data comprises nine variables capturing essential aspects of transactions such as transaction numbers, product codes, product descriptions, quantities sold, transaction dates, unit prices, customer IDs, the country of residence of the customer, and sales amounts. It encompasses sales data from December 1, 2010, to December 9, 2011. The data does not segregate its sales to wholesalers and retailers.
 
+The dataset was initially acquired from Kaggle for a preliminary assessment of its suitability for this project. However, upon a subsequent visit to the site for additional information, it was discovered that the dataset had been removed from Kaggle.com. A follow-up search on Google revealed the dataset's availability at the [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Online+Retail). Notably, the version found in the UC Irvine repository lacks the sales amount column, which is calculable by multiplying the quantities sold by the unit prices. The analysis for this project was conducted using the dataset originally downloaded from Kaggle.
 
-## Data import and cleaning
-_Write code that reads in the file and cleans it so it's ready for analysis. Since this will be fairly long code for most datasets, it might be a good idea to have it in one or several R scripts. If that is the case, explain here briefly what kind of cleaning/processing you do, and provide more details and well documented code somewhere (e.g. as supplement in a paper). All materials, including files that contain code, should be commented well so everyone can follow along._
+## Preliminary Data Cleaning
 
-The primary dataset for this project is the 'superstoredata' dataset, detailing transactions of an online retailer based in United Kingdom. A key feature of this data is that it counts sales of a particular item from an Invoice as an observation leading to different items sold in the same Invoice to appear as separate observations. Most of the Invoice numbers appear several times in different data observations.
+A key feature of this data is its treatment of each sale of an item on an Invoice as a separate observation, leading to multiple items sold on the same invoice to appear as distinct observations. Initially comprising 541,909 observations, the dataset was subjected to comprehensive cleaning. This process involved removal of records missing crucial customer ID information, conversion of key variables (CustomerID, Country, Description, StockCode) from character to factor types for better manipulation, and the exclusion of observations with negative quantities and sales, indicative of order cancellations.Further scrutiny led to the identification and removal of transactions with unusually high unit prices, likely representing logistical and transportation costs rather than direct transactional values. 
 
-### Initial Data Cleaning
+Moreover, the dataset's inability to distinguish sales to wholesalers presented a potential analysis bias due to the inclusion of bulk transactions. To mitigate this, scatter plots were employed to identify and eliminate observations corresponding to abnormally large sales amounts or quantities attributed to a single customer.
 
-As the project focuses on international customers, initial data cleaning involved eliminating UK transactions downsizing the data size to 46431 observations across nine variables.  
+Following these cleaning efforts, the dataset was refined to 289,065 observations.For a comprehensive overview of the cleaning process, please refer to the detailed explanation in processing section (R>processing-code.processing_superstore.qmd).
 
-The preliminary inspection identified several issues needing attention such as missing values in 'CustomerID', negative 'signs in 'Quantity' and 'Sales' values, and incorrectly formatted dates. Variables, 'InvoiceNo', 'StockCode', 'Description' and 'Country', originally coded as characters, were converted to factor types to facilitate better data manipulation.
+## Feature Engineering
 
-1480 observations lacked 'CustomerID' and were removed, as customer purchase pattern cannot be tracked without the unique identifier and 'CustomerID' was converted to factor type from numeric type. 'Country', 'Description' and 'StockCode' were converted to factors from character variables and transaction date to the date format.
+This analysis is comprised of four variables. The variable of interest in this analysis is the cumulative spending of each customer over the transaction period. To assess customer loyalty, which we have identified as our main predictor, we examined whether customers made repeat purchases during the critical holiday season. Additional predictors include the total number of transactions per customer throughout the period and whether the customer resides in the United Kingdom.
 
-There were 1372 observations with negative values in quantity and sales due to order cancellation which were excluded from the data.  
+We define 'customer loyalty' as a dummy variable based on transactional activity. Customers were considered loyal or returning if they had made at least one purchase prior to June 2011 and have returned for at least one additional purchase between October and December 2011. This classification was made based on the invoice date.
 
-An examination of 'UnitPrice' distribution revealed that all the high value goods with a Unitprice above 25 were distributed between 75 and 100 percentile. A closer inspection at this inter-quartile range disclosed that there were 19 product description categories with the Unitprice above 25. Some of those categories had descriptions such as CARRIAGE, POSTAGE, Manual, which appeared to be related to logistics. 1216 observations with such descriptions were dropped from the data since those were less likely to be directly related to customer purchase. 
+To calculate the number of purchases, we aggregated the data by invoice number and subsequently tallied the invoices for each Customer ID. Similarly, the total sum of purchases is derived by aggregating sales figures under each Customer ID.
 
-### Refining the Dataset
-The store also sold merchandises in wholesale quantities. A wholesaler potentially had larger purchases and in higher frequencies. In absence of clear information on wholesalers, a scatter plot of Cumulative Invoice Value of customers by Purchase Frequency was plotted to identify potential wholesalers. The scatter plot revealed that most of the customers made purchases less than a frequency of 50 and that most cumulative purchase values were less than 50,000. Assuming that the outliers represented purchases by wholesalers, observations with purchase frequencies above 50 and cumulative Invoice values above 50,000 were dropped from the data. This step excluded 9745 observations from the data. The cleaned data at this point had 32602 observations with 9 variables. Next, the quantities purchased in each invoice were plotted against the individual invoice values. The scatter plot revealed that the observations were concentrated within the purchase quantity below 1000 items and invoice amounts of 2,500. Assuming that the sparsely distributed points represent purchases by wholesalers, observations with Quantity above 1000 and individual Invoice value above 2,500 were further removed from the data.This step excluded 4485 observations for a final total observation of 28117.
+The final groundwork is consolidated on a per Customer ID basis, ensuring each customer was represented as a unique observation. This step enables a robust statistical analysis of spending patterns, customer loyalty, and geographic influence on purchasing behavior setting the stage for insightful findings on the dynamics of customer engagement and revenue generation.
 
-The study of customer spending pattern requires the knowledge of each individual transaction amount. The subsequent cleaning process reorganized the dataset by 'InvoiceNo', consolidating sales data under each invoice. This final data is saved as processed_superstore_RFM in the data > processed-data. 
+## Model Development
 
-### RFM Classification
-In absence of a pre-existing customer groups, the study segmented customers into two distinct groups using a recency, frequency and monetary (RFM) model. RFM model is a commonly used behavior-based model in analysing customer behavior [@yeh2009knowledge]. Recency is measured in days or months and represent the interval between the most recent transaction time and the time of analysis, and a lower number interval is preferred. Frequency is the number of purchases made in a certain period, and monetary is the total amount the customer spent during that time period.[@wei2010review]
+For the predictive analysis, three distinct models were fitted and evaluated: linear models, regularization-based models, and a non-linear model. The dataset was partitioned, allocating 75% for model training purposes and the remaining 25% designated for testing the ultimately selected model. To ensure model robustness, cross-validation was employed across all models, adhering to a ten-fold resampling methodology. The analysis was conducted within the tidymodels framework, with the exception of the cross-validation process for the Generalized Additive Model (GAM), which required handling separately due to its unique characteristics.
 
-In the RFM classification process, the Recency, Frequency and Monetary values are calculated for each customer, ensuring that each customer was represented only once in the modified dataset.Frequency in this data is the total no. of Invoices issued to the customer, and Monetary is the total purchases made by the customer during the stipulated period. Recency was calculated from the next day of the transaction period. Each customer was assigned a value ranging from 1 to 4 for the Recency, Frequency and Monetary attributes, reflecting their quartile position within each metric. Subsequently, these metrics were combined to formulate a three-digit score for every customer, positioning the Monetary value in the hundreds place, Frequency in the tens place, and Recency in the units place. All the customers with a score above 344 were assigned as High-Value Customers.
+## Model Overview
 
-Following RFM segmentation, logistic regression is applied to predict customer group membership. This method utilized the segments derived from RFM as the dependent variable, with the Recency, Frequency and Monetary attributes serving as independent variables. The objective is to develop a model for predictive analysis based on those segments.
+### Linear Model
+A linear model was deemed suitable given the limited number of predictor variables and the anticipated linear relationship between these predictors and the outcome variables. This model serves as a benchmark, providing a baseline from which the performance of more complex models can be evaluated.
 
-## Statistical analysis
-_Explain anything related to your statistical analyses._
+### Least Absolute Shrinkage and Selection Operator (LASSO) Regression
+In search of a model that balances complexity with interpretability, LASSO regression was selected. LASSO has useful feature of selectiing and effectively reducing the coefficients of less significant predictors to zero. This approach simplifies the model and also aimed at enhancing predictive accuracy.
+
+### Generalized Additive Model (GAM)
+To explore and accommodate potential non-linear relationships between the predictors and outcome variables, the Generalized Additive Model (GAM) was incorporated into the analysis. Chosen for its flexibility, GAM allows for the modeling of complex, non-linear interactions in a way that is both interpretable and visually demonstrable, offering a deeper insight into the underlying data structure.
+
+## Model Evaluation Metric
+The efficacy of these models was quantitatively assessed using the root mean square error (RMSE). RMSE is the square root of the average squared differences between the predicted and observed values. It offers a comprehensive measure of prediction accuracy, serving as the key metric for model comparison and selection.
 
 # Results
 
-## Exploratory/Descriptive analysis
-@tbl-resulttable1 depicts the descriptive statistics of various aspects of customers purchase behavior. There were 1402 transactions with 399 customers outside UK during the period from December 1, 2010 to	December 9, 2011. The store recorded a mean sales of GBP 436 per transaction, an average cumulative sales of GBP 1532 to individual customers and sales frequency of above 3 times per customer. 
+## Descriptive analysis
+The proportion of customers who purchased in both the periods is 30.72 percent. @tbl-resulttable1 depicts the descriptive statistics of various aspects of customers purchase behavior. The store made 14951 transactions with 4117 customers during the period from December 1, 2010 to	December 9, 2011, by recording a mean sales of GBP 290.19 (SD=GBP 187.36) per transaction, an average cumulative sales of GBP 1053.84 (SD = GBP 1429.07) to individual customers and an average sales frequency of above 3 times (SD = 4.28) per customer. The average no. of days before a customer returns to shop is recorded at 97.90 (SD=102.36) days. 
 
 
 ```{r out.width="100%", fig.show='hold', warning=FALSE}
@@ -102,151 +103,127 @@ resulttable1 = readRDS(here("results", "tables", "combined_stats.rds"))
 knitr::kable(resulttable1)
 
 ```
-
-@fig-result1 depicts the distribution of customer segmentation and suggests that approximately 25 percentage of the customers are grouped as Valued Customers. 
-
+@fig-result1 presents distribution of sum of customer purchase, invoice value, frequency and recency. For fitting linear model, the sum of purchase and frequency were log transformed due to heavy right-skewness. The metrics were converted into original scale after fitting the model. 
 ```{r}
 #| label: fig-result1
-#| fig-cap: "Distribution of Valued Customers"
+#| fig-cap: "Distribution"
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "Customer_Segment.png"))
+knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
 ```
-
-
-@fig-result2 depicts a correlation plot for Monetary, Frequency and Recency embedded with density plots. All of the density plots are heavily right-skewed. Monetary amount has a positive correlation of 0.787 with Frequency and a negative correlation of 0.334 with Recency. Likewise, the correlation between Recency and Frequency is negativ with a magnitude of 0.376. The correlation values indicated that collinearity is unlikely to be an issue for the analysis.
+@fig-result2 depicts the distribution of monthly sales of the store. The sales are noted to be modest with occassional and nominal variations during the initial period. Starting from October, the sales trajectory showed an upward trend, reaching maximum in November, which could be due to early holiday shopping for the approaching Christmas season. It is reasonable to anticipate that past customers would engage in purchasing activities during this peak sales period.
 
 ```{r}
 #| label: fig-result2
-#| fig-cap: "Correlation Plot"
-#| echo: FALSE
-#knitr::include_graphics(here("results", "figures", "Sales_distribution.png"))
-knitr::include_graphics(here("results", "figures", "correlations.png"))
-```
-{{< pagebreak >}}
-
-@fig-result3 depicts a trend of monthly international sales. A spike is noticed in November, presumably due to Christmas in the following month, which is also supported by distribution of the Recency plot. 
-```{r}
-#| label: fig-result3
-#| fig-cap: "Monthly Sales trend"
+#| fig-cap: "Distribution of Monthly Sales"
 #| echo: FALSE
 knitr::include_graphics(here("results", "figures", "Monthly_Sales.png"))
 ```
-{{< pagebreak >}}
 
-@fig-result4 depicts country-wise trend of international sales by sales amount. Top customers were in Germany, France, Spain and Belgium.  
+
+@fig-result3 and @fig-result4 depict two plots, Recency by Frequency plot and Recency by Monetary plot. While the Recency by Frequency plot revealed an expected pattern where customers with more frequent purchases tended to have more recent transactions, an unexpected trend was also noted. There are some evidence that a segment of customers with a history of multiple purchases did not return during the peak sales period. The Recency by Monetary plot mirrored the trend observed in the 'Recency by Frequency' plot. The plot revealed that a subset of customers who have purchased over 2,500 in monetary value in the past, did not make subsequent purchases within the following 100 days. 
+
 ```{r}
-#| label: fig-result4
+#| label: fig-result3
+#| fig-cap: "Recency Plots"
+#| echo: FALSE
+knitr::include_graphics(here("results", "figures", "Recency_by_Frequency.png"))
+knitr::include_graphics(here("results", "figures", "Recency_by_Monetary.png"))
+```
+@fig-result5 provides a visual impression of the the cumulative purchase by customers who returned during the holiday season (loyal customers) versus those who did not return during the holiday season. It suggests that the returning customers contributed more to the store's total sales than the non-returning customers.  
+
+```{r}
+#| label: fig-result5
+#| fig-cap: "Distribution of Cummulative Purchase by Returning status of the Customer "
+#| echo: FALSE
+knitr::include_graphics(here("results", "figures", "Purchase by loyaly.png"))
+```
+@fig-result6 presents country-wise sales trend. Majority of the customers are noted to be from the United Kingdom, followed by Germany, France, Belgium and Spain.  
+```{r}
+#| label: fig-result6
 #| fig-cap: "Countrywise Sales trend"
 #| echo: FALSE
 knitr::include_graphics(here("results", "figures", "Countrywise_Sales.png"))
 ```
 
-## Basic statistical analysis
+## Basic Statistical Analysis
 
-_To get some further insight into your data, if reasonable you could compute simple statistics (e.g. simple models with 1 predictor) to look for associations between your outcome(s) and each individual predictor variable. Though note that unless you pre-specified the outcome and main exposure, any "p<0.05 means statistical significance" interpretation is not valid._
-
-First, I fitted the traditional logistic regression model to segregate the high value clients without applying the cross-validation. The results  returned a warning message that the algorithm did not converge and that the fitted probabilities numerically 0 or 1 occurred. I computed the accuracy and AUC despite this message.
-
-{{< pagebreak >}}
-
-@tbl-resulttable2 depicts the accuracy of and ROC AUC metrics of the model. The model appears to have a perfect accuracy in predicting the customer segment based on the accuracy metric however it does not seem to have not even random guessing ability based on the ROC AUC metric.  
+A simple linear model was fitted to examine the association between total purchase a customer makde and the returning status of the customer. @tbl-resulttable2 depicts the results of the regression. It indicates that there is a positive association between customers returning during the peak season and the cummulative purchase of the customer.  
 
 ```{r out.width="100%", fig.show='hold', warning=FALSE}
 #| label: tbl-resulttable2
 #| tbl-cap: "Model Metrics"
 #| echo: FALSE
-resulttable2 = readRDS(here("results", "tables", "logit_combinedstats.rds"))
+resulttable2 = readRDS(here("results", "tables", "slr_fit_df.rds"))
 knitr::kable(resulttable2)
 
 ```
 
 
-## Full analysis
+## Full Analysis
 
-_Use one or several suitable statistical/machine learning methods to analyze your data and to produce meaningful figures, tables, etc. This might again be code that is best placed in one or several separate R scripts that need to be well documented. You want the code to produce figures and data ready for display as tables, and save those. Then you load them here._
+Three models were fitted to predict the sum of customer purchases: Linear Model, LASSO and GAM.
+@tbl-resulttable3 shows the model comparison for estimating the sum of purchases. The GAM model has the lowest RMSE, suggesting it performs well in prediction accuracy. However, when subjected to cross-validation, the GAM model's RMSE revealed a decrease in prediction accuracy across various subsets of the data compared to its initial evaluation based solely on the training data. Both the tuned and untuned Lasso models demonstrated the next lowest RMSE values. We  chose the simple Lasso model as our final model for its simplicity.
 
-### Penalized Logistic Regression with cross-validation
-For further analysis, I fitted a penalized logistic regression to the data using 'tidymodels' package and 10-fold cross-validation technique. The goal was to obtain the best value for predictions by tuning the model hyperparametes and using a mixture that chooses a simple model.
-
-The data has 25% of the customers grouped as Valued Customer. Due to this imbalanced proportions of the segment, the data was stratified by the outcome variable for splitting into training and testing sets to ensure that those subsets include similar proportion of Valued Customer.
-
-{{< pagebreak >}}
-
-@fig-result5 depicts the area under ROC curve by the range of penalty values. It provides visualization of validation set metrics. The curve has extreme high values, all at 1 before the penalty value of 1 followed by a sharp drop, suggesting the sensitivity of the performance of the model at the corresponding penalty value. These features of model performance are indicative of the training data being easily separable.
-
-
-```{r}
-#| label: fig-result5
-#| fig-cap: "Area under ROC curve by Penalty"
+```{r out.width="100%", fig.show='hold', warning=FALSE}
+#| label: tbl-resulttable3
+#| tbl-cap: "Model comparison"
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "ROC(AUC)_Penalty.png"))
+resulttable3 = readRDS(here("results", "tables", "RMSE_comparison.rds"))
+knitr::kable(resulttable3)
+
 ```
-{{< pagebreak >}}
-
-@fig-result6 depicts validation set ROC curve plotting true positive rate (sensitivity) against the false positive rate (1-specificity) at various threshold settings. The curve moves along 1-specificity and rises only from the end.This suggests that the model has no  ability to distinguish between the two customer categories. Contrarily, as in the case of traditional logistic model, the accuracy metrics of this validation set has a high value, 0.9966555.This suggested the need of digging down to the reason of these opposing model performances. The confusion matrix revealed that it almost perfectly identified both classes except for one date point. This indicated a potential inaccuracy or misinterpretation in the ROC curve plotting.  
-
-```{r}
-#| label: fig-result6
-#| fig-cap: "Visualization of Validation set ROC curve"
+The performance of the selected model, the simple Lasso model was evaluated by fitting it on the test set. @tbl-resulttable4 presents the RMSE of the model on the test data.
+```{r out.width="100%", fig.show='hold', warning=FALSE}
+#| label: tbl-resulttable4
+#| tbl-cap: "Test Data: Model Metrics"
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "ROC(AUC)_Validation.png"))
+resulttable4 = readRDS(here("results", "tables", "RMSE_Test.rds"))
+knitr::kable(resulttable4)
+
 ```
-{{< pagebreak >}}
-
-I plotted the ROC curve for the predicted probabilities for the negative class i.e. customer category '0' representing 'Not a Valued Customer'. Using this approach, the ROC-AUC values aligned with the confusion matrix and resulted into a almost perfect curve. The model showed high sensitivity for class 0 and high specificity for class 1, with correctly identifying almost all classes. 
-### (I need to figure out if this result is valid or interpretable or what caused this. The subsequent parts are assuming this result is valid)
-
+@fig-result7 depicts the Predicted versus Observed plot for the training and test data.
 
 ```{r}
 #| label: fig-result7
-#| fig-cap: "Validation set using Penalized Logistic Regression"
+#| fig-cap: "Predicted vs. Observed Plot"
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "ROC(AUC)_Validation_rev.png"))
+knitr::include_graphics(here("results", "figures", "Predicted_Observed.png"))
 ```
-In the next step, I applied the model to the test data to see its performance on unseen data. The resulting ROC_AUC curve also suggested that the model performed exceptionally well on the test data in classifying the two classes, with high accuracy, sensitivity and specificity. This excellent performance might potentially due to overfitting, which occurs when a model learns the training data too closely. The data is relatively straightforward. This may have made it easier for the model to learn and predict accurately on the test data. 
 
-
-### Random Forest with cross-validation
-In the next phase, I fitted a Random Forrest model with 10-fold cross validation using a space-filling design to tune, with 25 candidate models and plotted the results of the tuning process. The results indicated that for optimal performance, two or three predictors are required at each node with a varied minimal number of data points for splitting. The model is found to perform exceptionally well with high accuracy.   
-
-{{< pagebreak >}}
-
-I compared the validation set ROC curves for the top penalized logistic regression model and random forest model. Both models are found to perform well. 
+@fig-result8 presents Residual plot of the test data. 
 
 ```{r}
 #| label: fig-result8
-#| fig-cap: "Validation set: Penalized Logistic Regression vs Fandom Forest"
+#| fig-cap: "Residual Plot"
 #| echo: FALSE
-knitr::include_graphics(here("results", "figures", "ROC(AUC)_lrvsrf.png"))
+knitr::include_graphics(here("results", "figures", "Residual.png"))
 ```
-
-In the subsequent phase, the random forest model is evaluated on the testing data and is found to perform equally well on the testing data. 
-
-
-{{< pagebreak >}}
 
 
 # Discussion
 
 ## Summary and Interpretation
-_Summarize what you did, what you found and what it means._
+Three predictive models were applied to compare the total purchase amount by customers who returned during the peak season versus those who did not return: a Linear Model, LASSO, and GAM. Among these, the GAM model exhibited the lowest RMSE, signaling superior prediction accuracy. However, its performance dipped under cross-validation, displaying a decrease in accuracy across various data subsets, which diverged from its initial evaluation based on training data alone.
+
+Both tuned and untuned LASSO models recorded the next lowest RMSE values. This similarity in performance resulted because the tuning process yielded a penalty value for the optimal model close to that of the untuned version, with all predictors being retained. Owing to its simplicity, the simple Lasso model was chosen as the final model. When evaluated on the test set, this model showed a slightly higher RMSE of 683.87, compared to 675.38 on the training set, indicating a consistent yet marginally less accurate prediction capability.
+
+The Predicted versus Observed plots for both training and test data revealed that, for lower-values, the model's predictions were close to the diagonal line, suggesting relatively accurate predictions. However, as the values increased, both sets of data deviated from the perfect fit line, suggesting diminished accuracy for higher values. This pattern is suggestive of the potential influence of additional factors not captured by the model.
+
+Similarly, the residual plot for the test data revealed a fan-shaped pattern, indicative of heteroscedasticity and variance in prediction errors which increased with higher value predictions. This further points to the existence of other influential factors not considered in the model.
+
+Despite its merits, the Lasso model did not fully capture the complexities of the dataset. The diagnostic plots for both training and test data underscore the need for further model refinement to predict the difference in sum of purchases by returning and not-returning customers during the peak season with more accuracy. 
 
 ## Strengths and Limitations
-_Discuss what you perceive as strengths and limitations of your analysis._
+
+This project explored a complex relationship between the outcome and predictors by examining Linear, LASSO, and GAM models using limited available information. It also ensured the model's reliability through cross-validation. 
+
+Customer purchasing behavior is inherently multifaceted and deeply influenced by various demographic factors, including but not limited to gender, age, race, and educational background. These aspects can remarkably shape buying habits, preferences, and overall engagement with retail services. In our analysis, the models deployed were constrained by the scope of available data, primarily focusing on purchase frequency, recency, and the total amount spent. This limited information restricts our ability to fully understand and accurately predict customer behavior fully.  
+
+Considering the retail store's extensive inventory of over 3,000 items, along with associated quantities and unit prices, incorporating these information may potentially enhance the model's accuracy.
 
 ## Conclusions
-_What are the main take-home messages?_
+Future research could explore how the product-specific data contribute to predicting outcomes more effectively.
 
-_Include citations in your Rmd file using bibtex, the list of references will automatically be placed at the end_
-
-This paper [@leek2015] discusses types of analyses. 
-
-These papers [@mckay2020; @mckay2020a] are good examples of papers published using a fully reproducible setup similar to the one shown in this template. 
-
-Note that this cited reference will show up at the end of the document, the reference formatting is determined by the CSL file specified in the YAML header. Many more style files for almost any journal [are available](https://www.zotero.org/styles). You also specify the location of your bibtex reference file in the YAML. You can call your reference file anything you like, I just used the generic word `references.bib` but giving it a more descriptive name is probably better.
-
-
-{{< pagebreak >}}
 
 # References
 

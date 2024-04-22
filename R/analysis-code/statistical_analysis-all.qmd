@@ -1,0 +1,700 @@
+---
+title: "The Value of Loyalty: Customer impact on Online Store Revenue"
+format: html
+editor: visual
+---
+
+## Background
+
+The project aims to deepen the understanding of the customer base by identifying the core customers who demonstrate loyalty.This is achieved by focusing on customers who have purchased from the store during both the typically steady first five months of the year and the peak sales season.The sales data indicated that while the initial months show a modest performance, the latter part of the year, influenced by the holiday season, witnessed a surge in sales activity. Customers purchasing in the absence of major festive events are presumed to be driven by the intrinsic value of the product range, rather than seasonal discounts. Conversely, during the peak season, when the competition and promotional offers peak, those who return to make purchases can be considered as the store's regular/loyal clientele. These customers are invaluable throughout the year, contributing to consistent sales and enhancing revenue during peak times.
+
+A rigorous analysis is set to measure the impact of this customer segment on the overall business performance. The outputs of the analysis is anticipated to help refining marketing strategies and improving customer service practices to strengthen customer retention.
+
+First required packages are loaded.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#loading packages needed. 
+library(here) #for data loading/saving
+library(tidymodels) # for the parsnip package, along with the rest of tidymodels
+library(ggplot2) #for plotting
+library(dplyr) #for data wrangling
+library(gridExtra) # for combined display of plots
+library(broom) #for cleaning up output from lm()
+library(lubridate)#for date formating
+library(glmnet) #for fitting GLM via penalized maximum likelihood
+library(mgcv) #for Generalized Additive model
+
+```
+
+The processed data file is imported and visualied the summaries.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#path to data using the here() package
+data_location <- here::here("data","processed-data","processed_superstore.rds")
+#load required data. 
+mydata <- readRDS(data_location)
+#Summarizing and checking data
+skimr::skim(mydata)
+head(mydata)
+```
+
+The dataset encompasses 14951 transactions involving 4117 customers across 33 countries, with 3785 distinct product types being sold. It is comprehensive, with no missing values and includes essential information such as Invoice No., Invoice Date, Stock Code, Description, CustomerID, Country, Quantity, Unit Price, and Sales.
+
+### Feature Engineering
+
+To adapt the data for customer-level analysis, we will aggregate sales by CustomerID, thus summing up the total purchases for each customer. We will also count the unique Invoices per CustomerID to determine the purchase frequency.
+
+Preliminary data exploration has shown that sales peaked from September to December. We will classify any customer who has made at least one purchase before June 2011 and at least one between September and December as 'loyal.'
+
+To discern the purchasing behaviors across different regions, we have introduced a binary variable that distinguishes between UK-based customers and those from other countries.
+
+The sum of purchases by customers will serve as the dependent variable in our study. The independent variables will include customer loyalty, purchase frequency, and geographic location (UK or not). Given the limited number of predictors, strategic analysis execution is essential.
+
+In order to understand the relationship between the sum of purchases and customer loyalty, we will evaluate three distinct predictive models, each offering unique approaches to regression analysis:
+
+### Linear Regression Model:
+
+This model is chosen for its simplicity and interpretability. It assumes a linear relationship between the predictors and the dependent variable, which is a good starting point for many modeling tasks. It will serve as a benchmark for the performance of more complex models.
+
+### LASSO Regression:
+
+LASSO (Least Absolute Shrinkage and Selection Operator) is a type of linear regression that includes a penalty term to regularize the coefficients. This model is particularly useful when some of the predictors are irrelevant for the output. LASSO can help in feature selection by shrinking the less important feature coefficients to zero, thus simplifying the model and potentially improving prediction performance.
+
+### Generalized Additive Model (GAM):
+
+GAMs extend linear models by allowing for non-linear relationships between each predictor and the response. This is achieved by fitting a smooth function to each predictor. This flexibility makes GAMs powerful tools for capturing complex patterns in the data, which linear models might miss. They are also still interpretable, as we can visualize the effect of each predictor on the response.
+
+By comparing these models, we can understand how the addition of complexity and flexibility impacts the predictive accuracy, as measured by RMSE. The selected model will balance the trade-off between bias and variance, aiming for the lowest possible RMSE, which indicates the smallest average prediction error over our dataset."
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+#Classifying loyal customers - Customers who purchased at least once before June 2011 and then came back at least once during the period from September through December
+
+mydata <- mydata %>%
+  group_by(CustomerID) %>%
+  # Creating binary variables for purchases before June 2011 and after October 2011
+  mutate(
+    PurchaseBeforeJun2011 = any(InvoiceDate < as.Date("2011-06-01")),
+    PurchaseAfterOct2011 = any(InvoiceDate > as.Date("2011-10-01"))
+  ) %>%
+  # A customer is coded as loyal if they made at least one purchase in each period
+  mutate(loyal_cust = as.integer(PurchaseBeforeJun2011 & PurchaseAfterOct2011)) %>%
+  # Calculate frequency of purchase and sum of total purchase by each customer
+  mutate(
+    freq_purchase = n_distinct(InvoiceNo),
+    sum_purchase = sum(Sales)
+  ) %>%
+  ungroup() %>%
+  # Create a binary variable for UK sales and convert loyal_cust to a factor
+  mutate(
+    UK_sales = ifelse(Country == "United Kingdom", 1, 0),
+    loyal_cust = as.factor(loyal_cust)
+  ) %>%
+  # Remove intermediate variables for clarity
+  select(-PurchaseBeforeJun2011, -PurchaseAfterOct2011)
+skimr::skim(mydata)
+```
+
+We created a final dataset for analysis wherein each customer is uniquely observed.As per the exploratory data analysis, both the sum of purchases and frequency of purchases are heavily right-skewed. Thus, these predictors are log transformed for the linear model.
+
+```{r}
+#Creating a new file by aggregating sales and purchase counts by CustomerID with required columns
+final_data <- mydata%>%
+  group_by(CustomerID)%>%
+  summarise(
+    sum_purchase=first(sum_purchase),
+    freq_purchase=first(freq_purchase),
+    loyal_cust=first(loyal_cust),
+    UK_sales=first(UK_sales)
+    )%>%
+  mutate(loyal_cust=as.factor(loyal_cust),
+         #log transforming sum of total purchase and frequency of purchase 
+         log_sumpurchase = log(sum_purchase),
+         log_purfreq = log (freq_purchase))
+
+#Summarizing the data
+skimr::skim(final_data)
+#checking the ratio of loyal customers
+final_data%>%count(loyal_cust)%>%mutate(proportion = n /sum(n))
+```
+
+We visualize the distribution of loyal customers using a box plot. We also visualize the distribution of sum of purchase by purchase frequency stratified by loyal customers.
+
+```{r}
+# Boxplot for sum_purchase by loyal_cust
+p1<-ggplot(final_data, aes(x = as.factor(loyal_cust), y = sum_purchase)) + 
+    geom_boxplot() +
+    labs(title = "Total Purchases by Customer Status",
+       x = "loyal customer",
+       y = "sum of purchase")+
+    theme_minimal()
+p1
+
+# Scatterplot of sum_purchase vs freq_purchase stratified by loyal customers 
+p2<-ggplot(final_data, aes(x = freq_purchase, y = sum_purchase)) + 
+    geom_point(aes(color = as.factor(loyal_cust))) +
+    labs(title = "Frequency of Purchase vs Total Purchases",
+       x = "Purchase frequency",
+       y = "Sum of purchase") +
+    theme_minimal()
+p2
+
+figure_file = here("results","figures","Purchase by loyaly.png")
+ggsave(filename = figure_file, plot=p1)
+
+figure_file = here("results","figures","Purchase by frequency.png")
+ggsave(filename = figure_file, plot=p2)
+
+```
+
+```{r}
+# Visualize the distribution of log transformed sum_purchase
+p3<-ggplot(final_data, aes(x = log_sumpurchase)) + 
+    geom_histogram(binwidth = 1, fill = "lightgrey", color = "black") +
+    labs(title = "Distribution of log transformed sum of Purchases",
+       x = "log of Purchase")+
+    theme_minimal()
+
+# Visualize the distribution of log transformed freq_purchase
+p4<-ggplot(final_data, aes(x = log_purfreq)) + 
+    geom_histogram(binwidth = 1, fill = "lightgrey", color = "black") +
+    labs(title = "Distribution of log transformed Purchase frequencies",
+         x="log of Purchase frequency")+
+    theme_minimal() 
+
+plot1<-grid.arrange(p3, p4, ncol = 2, nrow=1)
+
+plot1
+
+figure_file = here("results","figures","distribution of transformed vars.png")
+ggsave(filename = figure_file, plot=plot1) 
+
+```
+
+### Data Set Up
+
+Now we partition the data into train and test sets. We use the train set to teach the model to recognize patterns and ultimately use the selected model on the test set to evaluate the selected model's performance, mimicking real world application.The split of 75:25, balances the model's exposure to enough data for learning with an adequate reserve for unbiased evaluation.
+
+```{r}
+#Set random number by setting the seed for reproducibility
+set.seed(123) 
+
+# Split the data into training and testing sets in the ratio of 75:25
+data_split <- initial_split(final_data, prop = 0.75)
+#Create training and testing sets
+train_data <- training(data_split)
+test_data <- testing(data_split)
+```
+
+First, we examine a simple linear model, with 'loyal customer' serving as the only predictor of the log-transformed sum of purchases, utilizing the tidy model workflow. Following this, we will enhance our analysis by fitting a multivariate linear model, incorporating additional predictors: the log-transformed frequency and the geographical region of sales. Subsequently, we will predict outcomes using both models on the training set and compare their performance.
+
+### Simple Linear Regression Model
+
+```{r}
+# Create a recipe for fitting the model with only main predictor 
+slr_recipe <- recipe(log_sumpurchase ~ loyal_cust, data = train_data)
+
+# Define the simple linear regression model specification
+slr_model <- linear_reg() %>%
+    set_engine("lm") %>%
+    set_mode("regression")
+
+# Bundle the recipe and model spec into a workflow
+slr_workflow <- workflow() %>%
+    add_recipe(slr_recipe) %>%
+    add_model(slr_model)
+
+# Fit the model
+slr_fit <- slr_workflow %>%
+    fit(data = train_data)
+
+# Summarize the model fit
+slr_fit_df<-tidy(slr_fit)
+
+file_path = here("results","tables","slr_fit_df.rds")
+saveRDS(slr_fit_df, file_path, )
+
+
+
+# Predict on the training set
+slr_log_predicts <- predict(slr_fit, new_data = train_data) %>%
+    bind_cols(train_data)
+
+#Converting the predicts to original scale
+
+slr_predicts <- slr_log_predicts%>%
+  mutate(slr_predicts = exp(.pred)) %>%
+  select(CustomerID, sum_purchase, slr_predicts, log_sumpurchase, .pred)
+
+# Evaluate the model
+metrics <- metric_set(rmse, rsq)
+slr_metrics <- metrics(data = slr_predicts, truth = sum_purchase, estimate = slr_predicts)
+print(slr_metrics)
+
+```
+
+### Multivariate Linear Regression
+
+```{r}
+# Create a recipe for fitting the model with other predictors 
+mlr_recipe <- recipe(log_sumpurchase ~ loyal_cust + log_purfreq + UK_sales, data = train_data)
+
+# Define the multivariate linear regression model specification
+mlr_model <- linear_reg() %>%
+    set_engine("lm") %>%
+    set_mode("regression")
+
+# Bundle the recipe and model spec into a workflow
+mlr_workflow <- workflow() %>%
+    add_recipe(mlr_recipe) %>%
+    add_model(mlr_model)
+
+# Fit the model
+mlr_fit <- mlr_workflow %>%
+    fit(data = train_data)
+
+# Summarize the model fit
+tidy(mlr_fit)
+
+#Model Evaluation: Predict on the training set
+mlr_log_predicts <- predict(mlr_fit, new_data = train_data) %>%
+    bind_cols(train_data)
+
+#Converting the predicts to original scale
+mlr_predicts <- mlr_log_predicts%>%
+  mutate(mlr_predicts = exp(.pred)) %>%
+  select(CustomerID, sum_purchase, mlr_predicts, log_sumpurchase, .pred)
+
+# Evaluate the model
+metrics <- metric_set(rmse, rsq)
+mlr_metrics <- metrics(data = mlr_predicts, truth = sum_purchase, estimate = mlr_predicts)
+print(mlr_metrics)
+
+```
+
+We found that the multivariate model significantly improved the prediction accuracy, evidenced by a reduced RMSE of 689, compared to the simple linear model's RMSE of 1308. This substantial reduction in RMSE indicates that the addition of log-transformed frequency and geographical region as predictors enhanced the model's ability to predict the log-transformed sum of purchases.
+
+Next, we used cross-validation techniques of 10-fold on the multivariate linear regression model to further validate its predictive accuracy. This method helps in mitigating overfitting and provides a comprehensive view of how well the multivariate model generalizes to unseen data.
+
+```{r}
+# Create a recipe for preprocessing
+mlr_cv_recipe <- recipe(log_sumpurchase ~ loyal_cust + log_purfreq + UK_sales, data = train_data)
+
+# Define the model specification
+mlr_cv_spec <- linear_reg() %>%
+  set_engine("lm") %>%
+  set_mode("regression")
+
+# Set up cross-validation at 10-fold
+mlr_cv_folds <- vfold_cv(train_data, v = 10, repeats = 1)
+
+# Bundle the recipe and model spec into a workflow
+mlr_cv_workflow <- workflow() %>%
+  add_recipe(mlr_cv_recipe) %>%
+  add_model(mlr_cv_spec)
+
+# Perform cross-validation
+mlr_cv_fit <- fit_resamples(
+  mlr_cv_workflow,
+  mlr_cv_folds,
+  control = control_resamples(save_pred = TRUE)
+)
+
+#Model Evaluation: Predict on the training set
+mlr_cv_log_predicts <- mlr_cv_fit %>% 
+  collect_predictions()
+
+# Transform predictions and actual values back to the original scale
+mlr_cv_log_predicts<- mlr_cv_log_predicts %>%
+  mutate(pred_original_scale = exp(mlr_cv_log_predicts$.pred),
+         sum_purchase = exp(log_sumpurchase))
+
+# Evaluate the model
+metrics <- metric_set(rmse, rsq)
+# Collect metrics
+mlr_cv_metrics <- metrics(data=mlr_cv_log_predicts, truth=sum_purchase, estimate= pred_original_scale)
+print(mlr_cv_metrics)
+
+```
+
+The RMSE from Cross-validation is 690.49 which is very close to the RMSE of 689.29 of the model without cross-validation. this suggests that the multivariate linear model is relatively stable.
+
+To further enhance model performance and explore the potential for a more parsimonious model, we next turn to LASSO regression. LASSO is an extension of linear regression which introduces a regularization term that shrinks some coefficients of the variables to zero, effectively eliminating those variables from the the model to simplify it. Though our model has only three predictors, this property of LASSO helps selecting only those predictors which are relevant to the outcome variable. By penalizing the magnitude of the coefficients, LASSO aims to reduce overfitting, improve model interpretability, and potentially uncover a more predictive subset of features.
+
+First I fit lasso model without tuning of penalty by setting up a minimal penalty of 0.1. Factor variables are encoded using dummy variables. As normalization is used in fitting lasso, numerical variables are kept at original scale.
+
+```{r}
+#Preparing recipe
+#Recipe for lasso model 
+lasso_recipe<-
+  recipe(sum_purchase ~ loyal_cust + freq_purchase + UK_sales, data = train_data) %>%
+  step_dummy(all_nominal(), -all_outcomes()) %>%
+  step_normalize(all_predictors())
+
+# Defining the lasso model setting the penalty at 0.1
+lasso_model<- linear_reg(penalty = 0.1, mixture = 1)%>%
+  set_engine("glmnet")%>%
+  set_mode("regression")
+
+#workflow for lasso model without tuning of penalty
+lasso_workflow <- workflow()%>%
+  add_model(lasso_model)%>%
+  add_recipe(lasso_recipe)
+#Fitting the lasso model
+lasso_fit <- lasso_workflow %>%
+  fit(data = train_data)
+
+```
+
+Next step is model prediction and model performance evaluation on the train data.
+
+```{r}
+#Computing model predictions
+lasso_predicts <- predict(lasso_fit, new_data = train_data)
+
+#augment to evaluate performance metric
+lasso_aug <- augment(lasso_fit, train_data)
+lasso_aug %>% select(sum_purchase,.pred)
+
+#Model evaluation: Calculatin of RMSE
+lasso_metrics <- lasso_aug %>% metrics(truth=sum_purchase, .pred)
+lasso_metrics
+
+```
+
+We can see the improvement in model performance with a reduced RMSE of 675.38 compared to the previously observed RMSE of 690.49 from the linear model with cross-validation.
+
+Subsequently, we focused on refining the LASSO model by incorporating tuning and leveraging cross-validation. The goal is to further optimize model parameters and ensure robustness by systematically evaluating the model's performance across various data subsets.
+
+We tuned the lasso model employing 10-fold cross-validation strategy with 5 repeats.
+
+```{r}
+#This recipe is same as it was in the previous simple lasso model
+lasso_recipe<-
+  recipe(sum_purchase ~ loyal_cust + freq_purchase + UK_sales, data = train_data) %>%
+  step_dummy(all_nominal(), -all_outcomes()) %>%
+  step_normalize(all_predictors())
+
+#Setting up the model so that the tuning function (tune())can work
+lasso_tunable <- linear_reg(penalty = tune(), mixture = 1)%>%
+  set_engine("glmnet")%>%
+  set_mode("regression")
+
+#workflow for tunable LASSO model
+lasso_wf_tunable <- workflow()%>%
+  add_model(lasso_tunable)%>%
+  add_recipe(lasso_recipe) 
+```
+
+We executed the tuning using a grid search over penalty values ranging from 10\^-1 to 10\^3.
+
+```{r ehco = TRUE}
+
+# Define a penalty parameter object with a range from 10^-1 to 10^3
+penalty_param <- penalty(range = c(-1, 3))
+# Create a regular grid of penalty values with 50 levels
+penalty_grid <- grid_regular(penalty_param, levels = 50)
+
+```
+
+we tuned the model using a 10-fold cross validation.
+
+```{r}
+#For reproducibility
+set.seed(1234)
+
+#Resampling the data using cross validation.   
+resamples_cv<-vfold_cv(train_data, v=10, repeats = 5)
+
+#Tuning the lasso model
+lasso_tune_results_cv <- lasso_wf_tunable %>%
+  tune_grid(resamples = resamples_cv, grid = penalty_grid)
+
+```
+
+Visualizing the diagnostics from the lasso tuning results to evaluate model performance.
+
+```{r}
+#plotting the diagnostics
+p3<-lasso_tune_results_cv%>%
+  autoplot()
+p3
+
+figure_file = here("results","figures","lasso_diagnostics.png")
+ggsave(filename = figure_file, plot=p3)
+
+```
+
+The model diagnostic plot reveals that lasso performs well at lower penalty values as evidenced by the value of corresponding RMSE metrics. As the penalty value goes up, especially after a certain threshold, the model becomes more regularized and some coefficients may shrink up-to zero increasing bias and the RMSE value. Lasso behaves similar to a linear model for very low penalty values resulting to similar values of RMSE. It is because at lower RMSE values the model is less regularized.
+
+Now, we evaluate the model performance and also examine the variables that are retained in the final model. We first identify the penalty parameter (lambda) that resulted in the lowest RMSE during the tuning process.
+
+```{r}
+#Retrieving the best penalty parameter from the tuning process 
+best_lambda <- lasso_tune_results_cv %>%
+  select_best(metric = "rmse") 
+best_lambda
+```
+
+The penalty value of the best model is similar to what we have used on the initial Lasso model. So, we expect the model metrics of the best model to be similar to the initial model. We set this explicit parameter and retrained the model on the entire training set.Then we compute the RMSE of the best model. We also extracted coefficients of the best model which allowed us to examine the predictor variables retained in the model.
+
+```{r}
+# Specify the LASSO model with the best penalty parameter
+final_lasso_model <- linear_reg(penalty = best_lambda$penalty, mixture = 1) %>%
+  set_engine("glmnet") %>%
+  set_mode("regression")
+
+# Create the final recipe (same as the previous)
+final_lasso_recipe <- recipe(sum_purchase ~ loyal_cust + freq_purchase + UK_sales, data = train_data) %>%
+  step_dummy(all_nominal(), -all_outcomes()) %>%
+  step_normalize(all_predictors())
+
+# Create the workflow with the final model and recipe
+final_lasso_workflow <- workflow() %>%
+  add_model(final_lasso_model) %>%
+  add_recipe(final_lasso_recipe)
+
+# Fit the final model on the entire training dataset
+final_lasso_fit <- final_lasso_workflow %>%
+  fit(data = train_data)
+
+# Retrieving prediction to compute RMSE using the best penalty parameter 
+final_lasso_predicts <- predict(final_lasso_fit, train_data) %>%
+  bind_cols(train_data)
+
+# Evaluate the model
+metrics <- metric_set(rmse, rsq)
+final_lasso_metrics <- metrics(data = final_lasso_predicts, truth = sum_purchase, estimate = .pred)
+
+# Extract coefficients from the final model
+final_lasso_coef <- final_lasso_fit %>%
+  extract_fit_parsnip() %>%
+  tidy()
+
+final_lasso_coef
+final_lasso_metrics
+```
+
+Apparently, the cross-validated lasso fitted model retained all three predictor variables and resulted RMSE similar to that from the untuned LASSO model. This outcome suggested the relevance of all predictor variables in the model.
+
+In the next step, we explore the possibility of nonlinear relationships between predictors and the outcome variables.We will apply Generalized Additive Model(GAM). It is chosen for its ability to effectively identify and illustrate complex relationships in the data.
+
+GAM is fitted using the REML method. The use of REML invokes the use of restricted Maximum Likelihood for estimating the smoothness parameters of the model. REML helps in objectively choosing a level of smoothness that balances fit and complexity, based on the data itself.
+
+```{r}
+# Create a recipe for fitting the model with other predictors 
+gam_recipe <- recipe(sum_purchase ~ loyal_cust + freq_purchase + UK_sales, data = train_data)%>%
+  step_normalize(all_numeric(), -all_outcomes())#normalizes the numeric predictor 'freq_purchase' ensuring exclusion of the outcom variable in this process
+
+# Prep and bake the recipe to apply transformations
+prepped_data <- prep(gam_recipe, training = train_data)
+#Apply the transformation to the training data
+baked_data <- bake(prepped_data, new_data = NULL)  # Apply transformations to the entire dataset
+
+# Fit the GAM model with the preprocessed data usint the method "REML"
+gam_fit <- gam(sum_purchase ~ s(freq_purchase) + loyal_cust + UK_sales, data = baked_data, method = "REML")
+
+# Summarize the model fit
+summary(gam_fit)
+
+#Model Evalutation: Predict on the baked training set
+gam_predicts <- predict(gam_fit, new_data = baked_data, type = "response")
+
+#Combining the predicts with the baked_data for the purpose of metrics calculations
+gam_predicts_df<-data_frame(gam_predicts)%>%
+  bind_cols(baked_data)
+
+#Converting to a tibble for compatibility with yardstick functions
+gam_predicts_df <- as_tibble(gam_predicts_df)
+
+#Evaluate the model
+gam_metrics <- gam_predicts_df %>%
+  metrics(truth = sum_purchase, estimate = gam_predicts)
+
+print(gam_metrics)
+
+```
+
+We can see the improvement in model performance using GAM with a reduced RMSE of 661.05 compared to the RMSEs of 675.38 from the Lasso model and 690.49 from the cross-validated linear model.
+
+Following this, we focused on enhancing the performance of GAM by implementing cross-validation techniques. The objective is to further optimize model parameters aiming for an optimal balance between fit and complexity.
+
+```{r}
+
+#Set random number by setting the seed for reproducibility
+set.seed(123) 
+
+#Creating 10-fold cross-validation from training data.   
+gam_cv<-vfold_cv(train_data, v=10)
+
+#As per ChatGPT, 'parsnip' doesn't directly support 'gam()' from 'mgcv'. So we loop through each of the CV folds, fit the GAM model using 'mgcv' directly and collect the prediction.
+gam_cv_results<- gam_cv$splits%>%
+  
+  map_df(function(split){
+    #Prepare the training and testing sets for this fold
+    train_split <- training(split)
+    test_split <- testing(split)
+    
+    #Apply the recipe to the training data
+    prepped_data <- prep(gam_recipe, training = train_split)
+    baked_train <- bake(prepped_data, new_data = NULL)
+    baked_test <- bake(prepped_data, new_data = test_split)
+    
+    #Fit the GAM model to the baked training data
+    gam_cv_fit <-gam(sum_purchase ~ loyal_cust + s(freq_purchase)+ UK_sales,
+                  data = baked_train, method = "REML")
+    
+    #Predict on the baked testing set
+    gam_cv_predicts<- predict(gam_cv_fit, newdata=baked_test, type="response")
+    
+    #Return the actual values and predictions in a tibble
+    tibble(
+      truth = baked_test$sum_purchase,
+      estimate=gam_cv_predicts
+    )
+  })
+#Collecting performance metrics
+gam_cv_metrics <- gam_cv_results %>%
+  metrics(truth = truth, estimate = estimate)
+gam_cv_metrics
+
+
+```
+
+We see that the RMSE goes upto 720.50 by using cross-validated GAM model compared to that of 661.05 with GAM model without cross-validation. This increase in RMSE suggests that the model's predictions are, on average, less accurate across different subsets of the data than suggested by the initial evaluation on the training data alone.
+
+### Model Selection
+
+We list the RMSEs of all the models that we have fitted so far and select the one with lowest RMSE.
+
+```{r}
+# Extract RMSE values
+slr_rmse <- slr_metrics %>% 
+  filter(.metric == "rmse") %>% 
+  pull(.estimate)
+
+mlr_rmse <- mlr_metrics %>% 
+  filter(.metric == "rmse") %>% 
+  pull(.estimate)
+
+mlr_cv_rmse <- mlr_cv_metrics %>% 
+  filter(.metric == "rmse") %>% 
+  pull(.estimate)
+
+lasso_rmse <- lasso_metrics %>%
+  filter(.metric == "rmse") %>%
+  pull(.estimate)
+
+lasso_cv_rmse <- final_lasso_metrics %>%
+  filter(.metric == "rmse") %>%
+  pull(.estimate)
+
+gam_rmse<-gam_metrics %>%
+  filter(.metric == "rmse") %>%
+  pull(.estimate)
+
+gam_cv_rmse<-gam_cv_metrics %>%
+  filter(.metric == "rmse") %>%
+  pull(.estimate)
+
+
+
+# Create a combined table
+model_comparison <- data.frame(
+  Model = c("Simple Linear", "Multivariate Linear", "Multivariate Linear Cross-validated", "Lasso without Tuning", "Lasso - Tuned and Cross-validated", "GAM model", "GAM Cross-validated"),
+  RMSE = c(slr_rmse, mlr_rmse, mlr_cv_rmse, lasso_rmse, lasso_cv_rmse, gam_rmse, gam_cv_rmse)
+)
+
+file_path = here("results","tables", "RMSE_comparison.rds")
+saveRDS(model_comparison, file_path)
+print(model_comparison)
+
+```
+
+We can see that the simple GAM model has the lowest RMSE, suggesting it performs well in prediction accuracy. However, when subjected to cross-validation, the GAM model's RMSE reveal a decrease in prediction accuracy across various subsets of the data compared to its initial evaluation based solely on the training data. Both the tuned/cross-validated and untuned Lasso models demonstrate the next lowest RMSE values. For simplicity, we choose the untuned Lasso model as our final selection.
+
+Finally, we evaluate the performance of the selected model i.e. simple Lasso model by fitting it on the testing set.
+
+```{r}
+#Computing model predictions
+lasso_test_predicts <- predict(lasso_fit, new_data = test_data)
+
+#augment to evaluate performance metric
+lasso_test_aug <- augment(lasso_fit, test_data)
+lasso_test_aug %>% select(sum_purchase,.pred)
+
+#Model evaluation: Calculatin of RMSE
+lasso_test_metrics <- lasso_test_aug %>% metrics(truth=sum_purchase, .pred)
+
+file_path = here("results","tables", "RMSE_Test.rds")
+saveRDS(lasso_test_metrics, file_path)
+
+lasso_test_metrics
+
+```
+
+We see that the RMSE of the model on test data is slightly higher at 683.87 compared to that of 675.38 on the train set.
+
+Now lets plot Residuals vs. Predicted values.
+
+```{r}
+lasso_test_aug<- lasso_test_aug %>%
+  mutate(residuals = .pred - sum_purchase)
+
+plot_residual<- ggplot(lasso_test_aug, aes(x=.pred, y=residuals))+
+  geom_point(size=1)+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +  
+  labs(x = "Predicted Values", y = "Residuals") +  
+  theme_bw()
+
+plot_residual
+
+figure_file = here("results","figures","Residual.png")
+ggsave(filename = figure_file, plot=plot_residual)
+  
+  
+```
+
+The residual plot exhibits a fan shaped pattern. Residuals are not evenly spread around the horizontal axis indicating the presence of heteroscedasticity. Higher values seem to have more variability in prediction errors than lower values. This can be indication of other factors that influence the outcome variable which are missing in the model.
+
+Next we plot the predicted values against the observed values for both the train and the test set.
+
+```{r}
+#creating an object for outcome variable sum_purchase from the training data
+Observed_train <- train_data$sum_purchase
+
+#creating an object for outcome variable sum_purchase from the test data
+Observed_test <- test_data$sum_purchase
+
+#Creating a new data frame containing columns for observed and predicted values of the train set 
+lasso_train <- data.frame(Observed= Observed_train, Predicted = lasso_aug$.pred, Model="Train")
+
+#Creating a new data frame containing columns for observed and predicted values of the Test set
+lasso_test<- data.frame(Observed = Observed_test, Predicted = lasso_test_aug$.pred, Model="Test")
+
+#Combining all the Observed and predicted values of the train and test sets by rows to create a long format data
+lasso_combined <- rbind(lasso_train, lasso_test)
+
+#Plotting of combined predicted vs observed data for the train data and test data
+
+p4<-ggplot(lasso_combined, aes(x=Observed, y=Predicted, color=Model))+
+  geom_point()+ 
+  scale_color_manual(values = c("Train"="blue", "Test"="red")) + 
+  geom_abline(intercept = 0, slope = 1, linetype = "solid", color="black") + #45 degree line
+   labs(x= "Observed Values", y ="Predicted Values", title = "Predicted vs. Observed Values")+
+  theme_minimal() # Use a minimal theme
+p4
+figure_file = here("results","figures","Predicted_Observed.png")
+ggsave(filename = figure_file, plot=p4)
+```
+
+For the lower values, both the train and test data seems cluster around the diagonal line indicating that the model predict the lower values well for both the data.However, both the data spreads away from the line of perfect fit as the value increases suggesting that the model is less accurate for higher values. The test data exhibits a wider spread for higher values than the train data suggesting that the model does not generalize well on the unseen data. Overall, while the model exhibits a reasonable predictive ability for observations with lower values, the increased spread among higher values and the differences between the training and test sets indicate that there may be room for improvement. There may be other factors that are instrumental in predicting the outcome variable.
