@@ -1,0 +1,167 @@
+---
+title: Project Review Template 
+author: Cassia Roth
+date: date-modified
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+---
+
+# Overview
+
+Title of project: The Value of Loyalty: Customer Impact on Online Store Revenue
+
+Name of project author(s): Malika Dhakhwa
+
+Name of project reviewer: Cassia Roth
+
+# Specific project content evaluation
+
+## Background, Context and Motivation
+
+How well is the context of the project described? Is a comprehensive background, including summary of previous/related work given? Is the project well placed into the context of existing work (including proper referencing of existing work). Is it clear why the project was undertaken and what new information it hopes to provide?
+
+### Feedback and Comments
+
+You clearly make the case for analyzing repeat customers to online retailers during holiday seasons given the importance of online shopping to the global consumer economy. I would clarify what you mean by repeat customers. Do you mean during the same holiday season or across multiple holiday seasons? You answer this question in the Background 2.1 section, but I would clarify it in the Introductory paragraph as well.
+
+### Summary assessment
+
+-   **strong contextualization and motivation**
+
+## Question description
+
+How well and clear are the question(s)/hypotheses the project aims to address described? Is it clear how the questions relate to the data?
+
+### Feedback and Comments
+
+The question, from my understanding, is: Do customers who make repeat purchases at one online retailer during a holiday season have a higher positive contribution to the retailer's annual revenue than customers who did not make repeat visits during that same season? Section 2.2 is great, but it is missing or doesn't clearly explain some of the important information you have in your EDA file: that customers who purchase during non-holiday periods are more likely to return during the holiday season and that their purchases during the holiday season only have a higher positive contribution than customers who only purchase during the holiday season. This is a key point that should be included in your question in a clear manner.
+
+### Summary assessment
+
+-   **question/hypotheses somewhat explained**
+
+## Data description
+
+How well is the data overall described? Is the source provided? Is a codebook or other meta-information available that makes it clear what the data is?
+
+### Feedback and Comments
+
+You do a superb job of describing your overall data. The codebook is clear as is the data source. 
+
+### Summary assessment
+
+-   **source and overall structure of data well explained**
+
+## Data wrangling and exploratory analysis
+
+How well is the data cleaned/processed and explored? Are all steps reasonable and well explained? Are alternatives discussed and considered? Are meaningful exploratory results shown (e.g. in the supplementary materials)?
+
+### Feedback and Comments
+
+The EDA is really well thought out and thorough. I appreciated all the visualizations and clear descriptions, both as text and as in-line comments to your r-code. My main question is why you dropped negative values. You say these are only order cancellations, but aren't these item returns (or also item returns)? This might be correlated with whether or not customers return to purchase during the holiday season (if these item returns occurred prior). In other words, I think there is a relationship here you could further explore that might be related to your question and hypothesis. Your description of feature engineering was very clear and made logical sense. Here, how you describe loyal customers is very easy to understand. You might want to bring a version of this into the introduction and hypothesis sections prior.
+
+### Summary assessment
+
+-   **essentially no weaknesses in wrangling and exploratory component**
+
+## Appropriateness of Analysis
+
+Were the analysis methods appropriate for the data? Was the analysis done properly? Were different components of the analysis (e.g. performance measure, variable selection, data pre-processing, model evaluation) done in the best way possible and explained well?
+
+### Feedback and Comments
+
+Your descriptions of your models is very clear and informative. From my understanding of these models, they make sense. However, you never clearly define your exposure/outcome variables in this section, which would be helpful for your reader.
+
+### Summary assessment
+
+-   **strong and reasonable analysis**
+
+## Presentation
+
+How well are results presented? Are tables and figures easy to read and understand? Are the main figures/tables publication level quality?
+
+### Feedback and Comments
+
+You might want to use the flextables package to make your tables more visualizing appealing in word. The label for Figures 3 and 4 did not come out correctly on my word document when I rendered the Quarto file. You might also want to think about only including half of the images you have in your final paper, and creating a supplemental file with other images.
+
+When describing your linear model (table 2), you might want to clarify that the dependent variable is cumulative purchase price in UK pound sterling (it is not clear from the table itself because your description just says cumulative purchase.
+
+### Summary assessment
+
+-   **results are very well presented**
+
+## Discussion/Conclusions
+
+Are the study findings properly discussed? Are strengths and limitations acknowledged? Are findings interpreted properly?
+
+### Feedback and Comments
+
+You do an excellent describing why you end up going with the LASSO model, but you don't spend very much time explaining what the model actually means. What are the findings from the LASSO model? Do returning customers contribute positively to the retailer's revenue per your hypothesis? This is missing from the discussion, which focuses only on model performance. If your paper is on the prediction of these models in relation to this type of question, then you will need to change that in your introductory section.
+
+### Summary assessment
+
+
+-   **minor parts wrong, missing or unclear**
+
+## Further comments
+
+Malika, you've done an excellent job here. I would suggest changing some of the language in your paper, since I found it somewhat confusing. In the abstract you state the "revenue implications of customer return behaviors." After reading more of the paper and running all of your code, I realize you mean customers who return to the website to purchase more items. However, "return behavior" could also imply customers returning items they don't like. Perhaps using the term "repeate customers" would be helpful.
+
+# Overall project content evaluation
+
+Evaluate overall features of the project by filling in the sections below.
+
+## Structure
+
+Is the project well structured? Are files in well labeled folders? Do files have reasonable names? Are all "junk" files not needed for analysis/reproduction removed? By just looking at files and folders, can you get an idea of how things fit together?
+
+### Feedback and Comments
+
+Everything was well structured and cleaned up. Great job.
+
+### Summary assessment
+
+-   **well structured**
+
+## Documentation
+
+How well is the project documented? Are you able to understand each step of the whole analysis, each decision that was made, and each line of code? Is enough information provided as comments in code or as part of Rmd files?
+
+### Feedback and Comments
+
+Everything was very well documented and easy to follow.
+
+### Summary assessment
+
+-   **fully and well documented**
+
+## Reproducibility
+
+Are all results fully reproducible? Is documentation provided which clearly explains how to reproduce things, and does it work without the need for any manual intervention? Are you able to re-run the whole analysis without having to do manual interventions/edits?
+
+### Feedback and Comments
+
+The master readme was very clear and easy to follow for reproducibility. I was able to reproduce the entire project without any problem.
+
+### Summary assessment
+
+-   **fully reproducible without issues**
+
+## Thoroughness
+
+How thorough was the overall study? Were alternatives (e.g. different ways of processing the data or different models) considered? Were alternatives discussed? Were the questions/hypotheses fully and thoroughly addressed?
+
+### Feedback and Comments
+
+I think you could better address your question/hypothesis in the discussion and conclusion sections. You could also beef up your conclusions to think about what this means for online retailers and how they might use this information to increase their revenue.
+
+### Summary assessment
+
+-   **strong level of thoroughness**
+
+## Further comments
+
+Great job Malika! I would double check your manuscript.qmd because often you have small grammatical errors, including spelling errors and particularly missing spaces between references or sentences.
